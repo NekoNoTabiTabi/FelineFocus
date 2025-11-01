@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:felinefocused/screens/setTimer.dart';
-import 'package:felinefocused/screens/appBlock.dart';
-import 'package:felinefocused/screens/focus.dart';
+
+import 'package:felinefocused/Screens/appBlock.dart';
+import 'package:felinefocused/Screens/focus.dart';
+import 'package:felinefocused/utils/timer.dart';
 
 
 class HomePage extends StatelessWidget {
-  const HomePage({Key? key}) : super(key: key);
+  const HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -19,15 +20,21 @@ class HomePage extends StatelessWidget {
           children: [
 
            
+
+
             
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(context,
-                MaterialPageRoute(builder: (context) => const SetTimer()),
-                );
-            },
-            child: const Text('Set Timer'),
-            ),
+
+           // Set Timer 
+            TimerDisplay(),
+
+
+
+
+
+
+
+
+            const SizedBox(height: 50),
             
              ElevatedButton(
               onPressed: () {
