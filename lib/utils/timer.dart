@@ -11,33 +11,53 @@ class TimerDisplay extends StatelessWidget {
     final timeProvider = Provider.of<TimeProvider>(context);
 
     return Column(
+
+
       mainAxisAlignment: MainAxisAlignment.center,
+
+
       children: [
+
+        
         Stack(
+
           alignment: Alignment.center,
+
           children: [
-            SizedBox(
-              height: 280,
-              width: 280,
-              child: CircularProgressIndicator(
-                backgroundColor: Colors.white,
-                value: timeProvider.initialTime > 0
-                    ? timeProvider.remainingTime / timeProvider.initialTime
-                    : 0,
-                strokeWidth: 8,
-              ),
-            ),
             GestureDetector(
               onTap: () => _showTimePicker(context, timeProvider),
-              child: Text(
-                _formatTime(timeProvider.remainingTime),
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold, fontSize: 45),
+              child: Container(
+                padding: const EdgeInsets.all(6), // Border thickness
+                decoration: const BoxDecoration(
+                color: Colors.green, // Border color
+                shape: BoxShape.circle,
+                ),
+             child: ClipOval(
+             child: ColoredBox(
+             color: Color(0xFFC7E9C0),
+             child: SizedBox(
+               height: 250,
+               width: 250,
+               child: Center(
+               child: Text(
+              _formatTime(timeProvider.remainingTime),
+               style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 45,
               ),
             ),
-          ],
+          ),
         ),
-        const SizedBox(height: 30),
+      ),
+    ),
+  ),
+)
+
+],
+),
+
+    
+/*
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -60,6 +80,8 @@ class TimerDisplay extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 20),
+
+
             GestureDetector(
               onTap: timeProvider.resetTimer,
               child: Container(
@@ -77,10 +99,13 @@ class TimerDisplay extends StatelessWidget {
               ),
             ),
           ],
-        ),
+        ),*/
       ],
     );
   }
+
+
+
 
   void _showTimePicker(BuildContext context, TimeProvider timerProvider) {
     showModalBottomSheet(
