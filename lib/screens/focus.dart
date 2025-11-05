@@ -54,7 +54,7 @@ class _FocusScreenState extends State<FocusScreen> {
           children: [
             GestureDetector(
               onTap: timeProvider.isRunning
-                  ? timeProvider.pauseTimer
+                  ? timeProvider.stopTimer
                   : timeProvider.startTimer,
               child: Container(
                 height: 50,

@@ -37,6 +37,7 @@ dependencies:
   provider: ^6.1.5+1
   cupertino: ^0.0.1
   block_app: ^0.0.1
+  installed_apps: ^2.0.0
 
 dev_dependencies:
   flutter_test:

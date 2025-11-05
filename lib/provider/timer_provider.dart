@@ -1,58 +1,57 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 
+
 class TimeProvider extends ChangeNotifier {
-  int _remainingTime = 60; // default timer value in seconds
-  int _initialTime = 60;
-  Timer? _timer;
+  int _remainingTime = 0;
   bool _isRunning = false;
+  Timer? _timer;
+
+
+  List<String> _selectedApps = []; // <-- store selected app package names
 
   int get remainingTime => _remainingTime;
-  int get initialTime => _initialTime;
   bool get isRunning => _isRunning;
-
-  // starts the timer and updates the remaining time every seconds.
-  void startTimer() {
-    if (_timer != null || _remainingTime == 0) return;
-    _isRunning = true;
-    _timer = Timer.periodic(
-      const Duration(seconds: 1),
-      (timer) {
-        if (_remainingTime > 0) {
-          _remainingTime--;
-          notifyListeners();
-        } else {
-          _timer?.cancel();
-          _timer = null;
-          _remainingTime = _initialTime; // Reset to inital time when tiemr ends
-          _isRunning = false;
-          notifyListeners();
-        }
-      },
-    );
-  }
-
-  // pause the timer.
-  void pauseTimer() {
-    _timer?.cancel();
-    _timer = null;
-    _isRunning = false;
-    notifyListeners();
-  }
-
-  // // Reset the timer to the initial time.
-  void resetTimer() {
-    _timer?.cancel();
-    _timer = null;
-    _remainingTime = _initialTime;
-    _isRunning = false;
-    notifyListeners();
-  }
+  List<String> get selectedApps => _selectedApps;
 
   void setTime(int seconds) {
     _remainingTime = seconds;
-    _initialTime = seconds;
+    notifyListeners();
+  }
+
+  void updateSelectedApps(List<String> apps) {
+    _selectedApps = apps;
+    notifyListeners();
+  }
+
+  Future<void> startTimer() async {
+    if (_remainingTime <= 0) return;
+
+    _isRunning = true;
+    notifyListeners();
+
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) async {
+      if (_remainingTime > 0) {
+        _remainingTime--;
+        notifyListeners();
+      } else {
+        stopTimer();
+      }
+    });
+  }
+
+  Future<void> stopTimer() async {
+    _isRunning = false;
+    _timer?.cancel();
+    _timer = null;
+
+   
+  }
+
+  Future<void> resetTimer() async {
+    _timer?.cancel();
+    _isRunning = false;
+    _remainingTime = 0;
     notifyListeners();
   }
 }
