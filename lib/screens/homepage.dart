@@ -1,6 +1,5 @@
 
 import 'package:flutter/material.dart';
-import 'package:felinefocused/service/app_block_service.dart';
 import 'package:felinefocused/Screens/app_block_settings.dart';
 import 'package:felinefocused/Screens/focus.dart';
 import 'package:felinefocused/utils/timer.dart';
@@ -50,7 +49,7 @@ class HomePage extends StatelessWidget {
             ElevatedButton(
               onPressed: () {           
                 Navigator.push(context,
-                MaterialPageRoute(builder: (context) => const InstalledAppsTestScreen()),
+                MaterialPageRoute(builder: (context) => const BlockAppsScreen()),
                 );
               },
 

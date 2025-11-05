@@ -1,27 +1,31 @@
-// lib/screens/installed_apps_test.dart
 import 'package:flutter/material.dart';
+import 'package:felinefocused/service/app_block_service.dart';
+
 import 'package:felinefocused/service/app_getter_service.dart';
 
-class InstalledAppsTestScreen extends StatefulWidget {
-  const InstalledAppsTestScreen({super.key});
+
+class BlockAppsScreen extends StatefulWidget {
+  const BlockAppsScreen({super.key});
 
   @override
-  State<InstalledAppsTestScreen> createState() => _InstalledAppsTestScreenState();
+  State<BlockAppsScreen> createState() => _BlockAppsScreenState();
 }
 
-class _InstalledAppsTestScreenState extends State<InstalledAppsTestScreen> {
-  final InstalledAppsService _service = InstalledAppsService.instance;
-  bool loading = true;
+class _BlockAppsScreenState extends State<BlockAppsScreen> {
+  final AppBlockManager _manager = AppBlockManager.instance;
   List<AppViewModel> apps = [];
+  Set<String> selectedPackages = {};
+  bool loading = true;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    _loadApps();
+    _manager.listenForBlockedAppAttempts();
   }
 
-  Future<void> _load() async {
-    final result = await _service.getLaunchableAppViewModels();
+  Future<void> _loadApps() async {
+    final result = await _manager.getLaunchableApps();
     setState(() {
       apps = result;
       loading = false;
@@ -31,23 +35,44 @@ class _InstalledAppsTestScreenState extends State<InstalledAppsTestScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Installed Apps (launchable)'),
-      ),
+      appBar: AppBar(title: const Text('Select Apps to Block')),
       body: loading
           ? const Center(child: CircularProgressIndicator())
-          : ListView.separated(
+          : ListView.builder(
               itemCount: apps.length,
-              separatorBuilder: (_, __) => const Divider(height: 0),
-              itemBuilder: (context, i) {
-                final a = apps[i];
+              itemBuilder: (context, index) {
+                final app = apps[index];
+                final isSelected = selectedPackages.contains(app.packageName);
                 return ListTile(
-                  leading: a.icon != null ? Image.memory(a.icon!, width: 40, height: 40) : null,
-                  title: Text(a.name),
-                  subtitle: Text(a.packageName),
+                  leading: app.icon != null
+                      ? Image.memory(app.icon!, width: 40, height: 40, fit: BoxFit.contain)
+                      : CircleAvatar(child: Text(app.name[0])),
+                  title: Text(app.name),
+                  trailing: Checkbox(
+                    value: isSelected,
+                    onChanged: (val) {
+                      setState(() {
+                        if (val == true) {
+                          selectedPackages.add(app.packageName);
+                        } else {
+                          selectedPackages.remove(app.packageName);
+                        }
+                      });
+                    },
+                  ),
                 );
               },
             ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          await _manager.blockApps(selectedPackages.toList());
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Selected apps are now blocked')),
+          );
+        },
+        label: const Text('Block Selected Apps'),
+        icon: const Icon(Icons.block),
+      ),
     );
   }
 }
