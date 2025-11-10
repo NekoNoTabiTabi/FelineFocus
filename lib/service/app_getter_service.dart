@@ -35,11 +35,7 @@ class InstalledAppsService {
     }
   }
 
-  /// Returns apps that are likely launchable by users.
-  /// Heuristic:
-  ///  - prefer apps where `isSystemApp == false`
-  ///  - if there's an explicit `isLaunchable`/`hasLaunchIntent` field, use it
-  ///  - otherwise exclude known non-user keywords in the app name or package
+ 
   Future<List<AppInfo>> getLaunchableApps() async {
   try {
     // excludeNonLaunchableApps = true ensures we only get apps with a valid launch intent

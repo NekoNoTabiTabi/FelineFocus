@@ -1,94 +1,92 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:block_app/block_app.dart';
-import 'package:felinefocused/service/app_getter_service.dart';
+import 'package:flutter_accessibility_service/flutter_accessibility_service.dart';
+import 'package:flutter_overlay_window/flutter_overlay_window.dart';
+import 'dart:ui' as ui; 
 
 class AppBlockManager {
-  AppBlockManager._private();
-  static final AppBlockManager instance = AppBlockManager._private();
+  AppBlockManager._();
+  static final AppBlockManager instance = AppBlockManager._();
 
-  final BlockApp _blockApp = BlockApp();
+  final List<String> _blockedApps = [];
+  StreamSubscription? _subscription;
 
-  
+  String? _lastBlockedPackage; // track last app we blocked
 
-  /// Initialize the blocking service
+  /// Get current blocked apps (read-only)
+  List<String> get blockedApps => List.unmodifiable(_blockedApps);
+
+  /// Update blocked apps dynamically from settings
+  void setBlockedApps(List<String> packages) {
+    _blockedApps
+      ..clear()
+      ..addAll(packages);
+    debugPrint("🔒 Updated blocked apps: $_blockedApps");
+  }
+
+  /// Initialize manager: permissions + accessibility listener
   Future<void> initialize() async {
-  await _blockApp.initialize(
-  config: AppBlockConfig(
-    autoStartService: true,
-    customOverlayBuilder: (context, packageName) {
-  return Container(
-    color: Colors.black.withOpacity(0.9),
-    alignment: Alignment.center,
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          'Blocked App',
-          style: TextStyle(color: Colors.white, fontSize: 24),
-        ),
-        Text(
-          packageName,
-          style: TextStyle(color: Colors.white, fontSize: 18),
-        ),
-        SizedBox(height: 20),
-        ElevatedButton(
-          onPressed: () {
-            Navigator.of(context).pop();
-          },
-          child: Text('Return'),
-        ),
-      ],
-    ),
-  );
-},
-  ),
-);
+    // Ensure overlay permission
+    if (!await FlutterOverlayWindow.isPermissionGranted()) {
+      await FlutterOverlayWindow.requestPermission();
+    }
+   
+    // Listen to accessibility events
+   bool _overlayProcessing = false;
+
+_subscription = FlutterAccessibilityService.accessStream.listen((event) async {
+  final packageName = event.packageName;
+  if (packageName == null) return;
+
+  debugPrint("📱 [Event] Package: $packageName | Type: ${event.eventType}");
+
+  if (_overlayProcessing) return; // skip if an overlay operation is running
+
+  _overlayProcessing = true;
+
+  try {
+    if (_blockedApps.contains(packageName) && _lastBlockedPackage != packageName) {
+      debugPrint("🚫 [Block Triggered] App: $packageName");
+      _lastBlockedPackage = packageName;
+      await _showOverlay();
+    } else if (_lastBlockedPackage != null && packageName != "com.example.felinefocused") {
+      debugPrint("✅ [Unblocked] App switched from $_lastBlockedPackage to $packageName");
+      _lastBlockedPackage = null;
+      await _hideOverlay();
+    }
+  } finally {
+    _overlayProcessing = false;
+  }
+});
   }
 
-  /// Request overlay and usage stats permissions
-  Future<void> requestPermissions() async {
-    await _blockApp.requestUsageStatsPermission();
-    await _blockApp.requestOverlayPermission();
-  
+  /// Dispose listener and hide overlay
+  Future<void> dispose() async {
+    await _subscription?.cancel();
+    await _hideOverlay();
+    _lastBlockedPackage = null;
   }
 
-  /// Check if all required permissions are granted
-  Future<bool> hasRequiredPermissions() async {
-    final permissions = await _blockApp.checkPermissions();
-    return permissions['hasOverlayPermission'] == true &&
-           permissions['hasUsageStatsPermission'] == true;
-  }
+  /// Show overlay (uses overlayMain entrypoint)
+Future<void> _showOverlay() async {
+  if (!await FlutterOverlayWindow.isActive()) {
+    debugPrint("🪟 [Overlay] Displaying blocking screen");
 
-  /// Get all user-launchable apps using InstalledAppsService
-  Future<List<AppViewModel>> getLaunchableApps() async {
-    return await InstalledAppsService.instance.getLaunchableAppViewModels();
+    await FlutterOverlayWindow.showOverlay(
+      enableDrag: false,
+      flag: OverlayFlag.defaultFlag,
+    
+    
+      overlayContent: 'Blocked', // simple text OR use overlayChild if available
+      visibility: NotificationVisibility.visibilityPublic,
+    );
   }
-
-  /// Block selected apps by package name
-  Future<void> blockApps(List<String> packageNames) async {
-    for (final pkg in packageNames) {
-      await _blockApp.blockApp(pkg);
+}
+  /// Hide overlay if active
+  Future<void> _hideOverlay() async {
+    if (await FlutterOverlayWindow.isActive()) {
+      debugPrint("🪟 [Overlay] Hiding blocking screen");
+      await FlutterOverlayWindow.closeOverlay();
     }
   }
-
-  /// Unblock all apps
-  Future<void> unblockAll() async {
-    await _blockApp.unblockAllApps();
-  }
-
-  /// Check if a specific app is blocked
-  Future<bool> isBlocked(String packageName) async {
-    return await _blockApp.isAppBlocked(packageName);
-  }
-
-  /// Listen for blocked app attempts
-  void listenForBlockedAppAttempts() {
-    _blockApp.onBlockedAppDetected((packageName) {
-      debugPrint('⚠️ Attempt to open blocked app: $packageName');
-   
-    });
-  }
-
-  
-
 }
