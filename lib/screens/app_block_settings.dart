@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:felinefocused/service/app_getter_service.dart';
-import 'package:felinefocused/service/app_block_service.dart';
+import 'package:provider/provider.dart';
+import '../provider/timer_provider.dart'; // Add this import
+
 class BlockAppsScreen extends StatefulWidget {
   const BlockAppsScreen({super.key});
 
@@ -21,6 +23,11 @@ class _BlockAppsScreenState extends State<BlockAppsScreen> {
 
   Future<void> _loadApps() async {
     final list = await InstalledAppsService.instance.getLaunchableAppViewModels();
+    
+    // Load previously selected apps from provider
+    final timeProvider = Provider.of<TimeProvider>(context, listen: false);
+    selectedPackages = Set.from(timeProvider.selectedApps);
+    
     setState(() {
       apps = list;
       loading = false;
@@ -61,16 +68,19 @@ class _BlockAppsScreenState extends State<BlockAppsScreen> {
                   },
                 ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          // Pass selected apps to AppBlockManager
-          AppBlockManager.instance.setBlockedApps(selectedPackages.toList());
+        onPressed: () {
+          // Save selected apps to TimeProvider
+          final timeProvider = Provider.of<TimeProvider>(context, listen: false);
+          timeProvider.updateSelectedApps(selectedPackages.toList());
 
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Selected apps are now blocked')),
+            SnackBar(content: Text('${selectedPackages.length} apps will be blocked during focus sessions')),
           );
+          
+          Navigator.pop(context);
         },
-        label: const Text('Block Selected Apps'),
-        icon: const Icon(Icons.block),
+        label: const Text('Save Selection'),
+        icon: const Icon(Icons.check),
       ),
     );
   }

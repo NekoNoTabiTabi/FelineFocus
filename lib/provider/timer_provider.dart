@@ -1,14 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-
+import '../service/app_block_service.dart'; // Add this import
 
 class TimeProvider extends ChangeNotifier {
   int _remainingTime = 0;
   bool _isRunning = false;
   Timer? _timer;
 
-
-  List<String> _selectedApps = []; // <-- store selected app package names
+  List<String> _selectedApps = [];
 
   int get remainingTime => _remainingTime;
   bool get isRunning => _isRunning;
@@ -28,6 +27,11 @@ class TimeProvider extends ChangeNotifier {
     if (_remainingTime <= 0) return;
 
     _isRunning = true;
+    
+    // Enable app blocking when timer starts
+    AppBlockManager.instance.setBlockedApps(_selectedApps);
+    await AppBlockManager.instance.enableBlocking();
+    
     notifyListeners();
 
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) async {
@@ -35,7 +39,7 @@ class TimeProvider extends ChangeNotifier {
         _remainingTime--;
         notifyListeners();
       } else {
-        stopTimer();
+        await stopTimer();
       }
     });
   }
@@ -45,13 +49,20 @@ class TimeProvider extends ChangeNotifier {
     _timer?.cancel();
     _timer = null;
 
-   
+    // Disable app blocking when timer stops
+    await AppBlockManager.instance.disableBlocking();
+    
+    notifyListeners();
   }
 
   Future<void> resetTimer() async {
     _timer?.cancel();
     _isRunning = false;
     _remainingTime = 0;
+    
+    // Disable app blocking when timer resets
+    await AppBlockManager.instance.disableBlocking();
+    
     notifyListeners();
   }
 }
