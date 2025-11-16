@@ -1,11 +1,15 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../service/app_block_service.dart'; // Add this import
+import '../service/app_block_service.dart';
+import '../service/completion_overlay_service.dart';
 
 class TimeProvider extends ChangeNotifier {
   int _remainingTime = 0;
   bool _isRunning = false;
   Timer? _timer;
+  
+  // Callback for when timer completes (in-app UI)
+  void Function()? onTimerComplete;
 
   List<String> _selectedApps = [];
 
@@ -40,6 +44,14 @@ class TimeProvider extends ChangeNotifier {
         notifyListeners();
       } else {
         await stopTimer();
+        
+        // Show system-wide completion overlay
+        await CompletionOverlayService.instance.showCompletionOverlayWithAutoClose(
+          duration: const Duration(seconds: 10),
+        );
+        
+        // Also trigger in-app callback if available
+        onTimerComplete?.call();
       }
     });
   }
@@ -62,6 +74,9 @@ class TimeProvider extends ChangeNotifier {
     
     // Disable app blocking when timer resets
     await AppBlockManager.instance.disableBlocking();
+    
+    // Close any active completion overlay
+    await CompletionOverlayService.instance.hideCompletionOverlay();
     
     notifyListeners();
   }

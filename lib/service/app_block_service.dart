@@ -10,7 +10,7 @@ class AppBlockManager {
   final List<String> _blockedApps = [];
   StreamSubscription? _subscription;
   bool _blockingEnabled = false;
-  bool _isListening = false; // Track if we're actively listening
+  bool _isListening = false;
 
   String? _lastBlockedPackage;
 
@@ -81,7 +81,7 @@ class AppBlockManager {
         if (_blockedApps.contains(packageName) && _lastBlockedPackage != packageName) {
           debugPrint("🚫 [Block Triggered] App: $packageName");
           _lastBlockedPackage = packageName;
-          await _showOverlay();
+          await _showBlockingOverlay();
         } else if (_lastBlockedPackage != null && packageName != "com.example.felinefocused") {
           debugPrint("✅ [Unblocked] App switched from $_lastBlockedPackage to $packageName");
           _lastBlockedPackage = null;
@@ -116,15 +116,14 @@ class AppBlockManager {
     debugPrint("🗑️ AppBlockManager disposed");
   }
 
-  /// Show overlay
-  Future<void> _showOverlay() async {
+  /// Show blocking overlay (for blocked apps)
+  Future<void> _showBlockingOverlay() async {
     if (!await FlutterOverlayWindow.isActive()) {
       debugPrint("🪟 [Overlay] Displaying blocking screen");
 
       await FlutterOverlayWindow.showOverlay(
         enableDrag: false,
         flag: OverlayFlag.defaultFlag,
-        overlayContent: 'Blocked',
         visibility: NotificationVisibility.visibilityPublic,
       );
     }
@@ -133,8 +132,13 @@ class AppBlockManager {
   /// Hide overlay if active
   Future<void> _hideOverlay() async {
     if (await FlutterOverlayWindow.isActive()) {
-      debugPrint("🪟 [Overlay] Hiding blocking screen");
+      debugPrint("🪟 [Overlay] Hiding overlay screen");
       await FlutterOverlayWindow.closeOverlay();
     }
+  }
+
+  /// Force close any active overlay (used before showing completion overlay)
+  Future<void> forceCloseOverlay() async {
+    await _hideOverlay();
   }
 }

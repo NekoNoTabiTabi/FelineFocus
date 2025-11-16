@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'app.dart';
 import 'provider/timer_provider.dart';
-
+import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import 'service/app_block_service.dart'; 
-
+import 'package:flutter_accessibility_service/flutter_accessibility_service.dart';
+import 'overlays/completion_overlay.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,19 +23,45 @@ void main() async {
   );
 }
 
+/// Entry point for blocking overlay (when blocked apps are opened)
 @pragma("vm:entry-point")
 void overlayMain() {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Check what type of overlay to show based on data passed
+  FlutterOverlayWindow.overlayListener.listen((event) {
+    debugPrint("📨 Overlay message received: $event");
+  });
+  
   runApp(
     const MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: OverlayScreen(),
+      home: BlockingOverlayScreen(),
     ),
   );
 }
 
-class OverlayScreen extends StatelessWidget {
-  const OverlayScreen({super.key});
+/// Entry point for completion overlay (when timer finishes)
+@pragma("vm:entry-point")
+void completionOverlayMain() {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(
+    MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: GestureDetector(
+        onTap: () async {
+          // Close overlay when tapped
+          await FlutterOverlayWindow.closeOverlay();
+        },
+        child: const CompletionOverlayContent(),
+      ),
+    ),
+  );
+}
+
+// Blocking overlay screen
+class BlockingOverlayScreen extends StatelessWidget {
+  const BlockingOverlayScreen({super.key});
   
   @override
   Widget build(BuildContext context) {
