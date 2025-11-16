@@ -77,8 +77,8 @@ class _FocusScreenState extends State<FocusScreen> {
         onStartAnother: () {
           _removeOverlay();
           final timeProvider = Provider.of<TimeProvider>(context, listen: false);
-          // Keep the same timer duration and restart
-          timeProvider.startTimer();
+          // Restart with the same duration using restartTimer
+          timeProvider.restartTimer();
         },
       ),
     );
@@ -103,51 +103,48 @@ class _FocusScreenState extends State<FocusScreen> {
     final timeProvider = Provider.of<TimeProvider>(context);
 
     return WillPopScope(
-      onWillPop: () async {
-        // Show confirmation dialog when user tries to leave during active session
-        if (timeProvider.isRunning) {
-          final shouldPop = await showDialog<bool>(
-            context: context,
-            builder: (context) => AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              title: const Text('End Focus Session?'),
-              content: const Text(
-                'Are you sure you want to end your focus session early?',
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: () async {
-                    await timeProvider.resetTimer();
-                    if (context.mounted) {
-                      Navigator.of(context).pop(true);
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                  ),
-                  child: const Text(
-                    'End Session',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
-              ],
+  onWillPop: () async {
+    // Show confirmation dialog when user tries to leave during active session
+    if (timeProvider.isRunning) {
+      final shouldPop = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text('End Focus Session?'),
+          content: const Text(
+            'Are you sure you want to end your focus session early? Your timer will be reset to the start.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
             ),
-          );
-          return shouldPop ?? false;
-        }
-        return true;
-      },
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Focus Session'),
-          backgroundColor: Colors.green,
+            ElevatedButton(
+              onPressed: () async {
+                await timeProvider.stopTimer(); // Use stopTimer instead of resetTimer
+                if (context.mounted) {
+                  Navigator.of(context).pop(true);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+              ),
+              child: const Text(
+                'End Session',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
         ),
+      );
+      return shouldPop ?? false;
+    }
+    return true;
+  },
+      child: Scaffold(
+      
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -194,6 +191,20 @@ class _FocusScreenState extends State<FocusScreen> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
+              
+              // Show initial duration hint
+              if (timeProvider.initialTime > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: Text(
+                    'of ${_formatTime(timeProvider.initialTime)}',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ),
+              
               const SizedBox(height: 50),
 
               // Control buttons
@@ -222,65 +233,65 @@ class _FocusScreenState extends State<FocusScreen> {
                   const SizedBox(width: 30),
 
                   // Stop button
-                  GestureDetector(
-                    onTap: () async {
-                      if (timeProvider.isRunning) {
-                        final shouldStop = await showDialog<bool>(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            title: const Text('End Session?'),
-                            content: const Text(
-                              'Are you sure you want to end your focus session?',
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.of(context).pop(false),
-                                child: const Text('Cancel'),
-                              ),
-                              ElevatedButton(
-                                onPressed: () => Navigator.of(context).pop(true),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.red,
-                                ),
-                                child: const Text(
-                                  'End',
-                                  style: TextStyle(color: Colors.white),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                        
-                        if (shouldStop == true) {
-                          await timeProvider.resetTimer();
-                          if (mounted) {
-                            Navigator.pop(context);
-                          }
-                        }
-                      } else {
-                        await timeProvider.resetTimer();
-                        if (mounted) {
-                          Navigator.pop(context);
-                        }
-                      }
-                    },
-                    child: Container(
-                      height: 60,
-                      width: 60,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.red,
-                      ),
-                      child: const Icon(
-                        Icons.stop,
-                        size: 40,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
+                 GestureDetector(
+  onTap: () async {
+    if (timeProvider.isRunning) {
+      final shouldStop = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text('End Session?'),
+          content: const Text(
+            'Are you sure you want to end your focus session? Your timer will be reset to the start.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+              ),
+              child: const Text(
+                'End',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+      );
+      
+      if (shouldStop == true) {
+        await timeProvider.stopTimer(); // Use stopTimer instead of resetTimer
+        if (mounted) {
+          Navigator.pop(context);
+        }
+      }
+    } else {
+      await timeProvider.stopTimer(); // Use stopTimer instead of resetTimer
+      if (mounted) {
+        Navigator.pop(context);
+      }
+    }
+  },
+  child: Container(
+    height: 60,
+    width: 60,
+    decoration: const BoxDecoration(
+      shape: BoxShape.circle,
+      color: Colors.red,
+    ),
+    child: const Icon(
+      Icons.stop,
+      size: 40,
+      color: Colors.white,
+    ),
+  ),
+),
                 ],
               ),
             ],

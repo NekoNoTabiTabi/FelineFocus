@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import 'app_block_service.dart';
+import '../overlays/overlay_manager.dart';
 
 class CompletionOverlayService {
   CompletionOverlayService._();
@@ -8,7 +9,7 @@ class CompletionOverlayService {
 
   bool _isShowing = false;
 
-  /// Show the completion overlay
+  /// Show the completion overlay with proper full-screen configuration
   Future<void> showCompletionOverlay() async {
     if (_isShowing) {
       debugPrint("⚠️ Completion overlay already showing");
@@ -27,28 +28,43 @@ class CompletionOverlayService {
       // First, disable blocking to ensure no conflicts
       await AppBlockManager.instance.disableBlocking();
       
-      // Wait a moment
-      await Future.delayed(const Duration(milliseconds: 200));
+      // Wait for blocking overlay to close
+      await Future.delayed(const Duration(milliseconds: 300));
       
       _isShowing = true;
+      
+      // Set the overlay type BEFORE showing/updating
+      OverlayManager.setOverlayType(OverlayType.completion);
 
-      // If overlay is already active, just change the content
-      if (await FlutterOverlayWindow.isActive()) {
+      // Check if overlay is already active
+      final isActive = await FlutterOverlayWindow.isActive();
+      
+      if (isActive) {
         debugPrint("🔄 Updating existing overlay to completion type");
+        // Send data to switch overlay content
         await FlutterOverlayWindow.shareData('completion');
       } else {
         debugPrint("🎉 Showing new completion overlay");
-        // Send message to set overlay type to completion
+        
+        // Send data to set overlay type
         await FlutterOverlayWindow.shareData('completion');
         
+        // Small delay to ensure data is received
+        await Future.delayed(const Duration(milliseconds: 100));
+        
+        // Show the overlay with full-screen configuration
         await FlutterOverlayWindow.showOverlay(
           enableDrag: false,
           flag: OverlayFlag.defaultFlag,
           visibility: NotificationVisibility.visibilityPublic,
+          height: WindowSize.matchParent,
+          width: WindowSize.matchParent,
+          alignment: OverlayAlignment.center,
+          positionGravity: PositionGravity.none,
         );
       }
 
-      debugPrint("✅ Completion overlay shown");
+      debugPrint("✅ Completion overlay shown/updated");
     } catch (e) {
       debugPrint("❌ Error showing completion overlay: $e");
       _isShowing = false;

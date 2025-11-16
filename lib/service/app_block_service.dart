@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_accessibility_service/flutter_accessibility_service.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
+import '../overlays/overlay_manager.dart';
 
 class AppBlockManager {
   AppBlockManager._();
@@ -116,15 +117,28 @@ class AppBlockManager {
     debugPrint("🗑️ AppBlockManager disposed");
   }
 
-  /// Show blocking overlay (for blocked apps)
+  /// Show blocking overlay with proper full-screen configuration
   Future<void> _showBlockingOverlay() async {
     if (!await FlutterOverlayWindow.isActive()) {
       debugPrint("🪟 [Overlay] Displaying blocking screen");
+      
+      // Set overlay type to blocking
+      OverlayManager.setOverlayType(OverlayType.blocking);
+      
+      // Send message to overlay
+      await FlutterOverlayWindow.shareData('blocking');
+      
+      // Small delay
+      await Future.delayed(const Duration(milliseconds: 100));
 
       await FlutterOverlayWindow.showOverlay(
         enableDrag: false,
         flag: OverlayFlag.defaultFlag,
         visibility: NotificationVisibility.visibilityPublic,
+        height: WindowSize.matchParent,
+        width: WindowSize.matchParent,
+        alignment: OverlayAlignment.center,
+        positionGravity: PositionGravity.none,
       );
     }
   }
@@ -135,10 +149,5 @@ class AppBlockManager {
       debugPrint("🪟 [Overlay] Hiding overlay screen");
       await FlutterOverlayWindow.closeOverlay();
     }
-  }
-
-  /// Force close any active overlay (used before showing completion overlay)
-  Future<void> forceCloseOverlay() async {
-    await _hideOverlay();
   }
 }
