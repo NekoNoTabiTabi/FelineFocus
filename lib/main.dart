@@ -6,6 +6,7 @@ import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import 'service/app_block_service.dart'; 
 import 'package:flutter_accessibility_service/flutter_accessibility_service.dart';
 import 'overlays/completion_overlay.dart';
+import 'overlays/overlay_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,40 +24,64 @@ void main() async {
   );
 }
 
-/// Entry point for blocking overlay (when blocked apps are opened)
+/// Single entry point for ALL overlays - switches content based on type
 @pragma("vm:entry-point")
 void overlayMain() {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Check what type of overlay to show based on data passed
-  FlutterOverlayWindow.overlayListener.listen((event) {
-    debugPrint("📨 Overlay message received: $event");
-  });
-  
   runApp(
     const MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: BlockingOverlayScreen(),
+      home: DynamicOverlayScreen(),
     ),
   );
 }
 
-/// Entry point for completion overlay (when timer finishes)
-@pragma("vm:entry-point")
-void completionOverlayMain() {
-  WidgetsFlutterBinding.ensureInitialized();
-  runApp(
-    MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: GestureDetector(
-        onTap: () async {
-          // Close overlay when tapped
-          await FlutterOverlayWindow.closeOverlay();
-        },
-        child: const CompletionOverlayContent(),
-      ),
-    ),
-  );
+/// Dynamic overlay that shows different content based on OverlayManager state
+class DynamicOverlayScreen extends StatefulWidget {
+  const DynamicOverlayScreen({super.key});
+
+  @override
+  State<DynamicOverlayScreen> createState() => _DynamicOverlayScreenState();
+}
+
+class _DynamicOverlayScreenState extends State<DynamicOverlayScreen> {
+  @override
+  void initState() {
+    super.initState();
+    
+    // Listen for overlay data messages from main app
+    FlutterOverlayWindow.overlayListener.listen((data) {
+      debugPrint("📨 Overlay received data: $data");
+      
+      if (data == 'completion') {
+        setState(() {
+          OverlayManager.setOverlayType(OverlayType.completion);
+        });
+      } else if (data == 'blocking') {
+        setState(() {
+          OverlayManager.setOverlayType(OverlayType.blocking);
+        });
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Show different content based on current overlay type
+    switch (OverlayManager.currentType) {
+      case OverlayType.completion:
+        return GestureDetector(
+          onTap: () async {
+            await FlutterOverlayWindow.closeOverlay();
+          },
+          child: const CompletionOverlayContent(),
+        );
+      
+      case OverlayType.blocking:
+        return const BlockingOverlayScreen();
+    }
+  }
 }
 
 // Blocking overlay screen

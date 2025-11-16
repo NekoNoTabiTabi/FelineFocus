@@ -8,7 +8,7 @@ class CompletionOverlayService {
 
   bool _isShowing = false;
 
-  /// Show the completion overlay (full screen, system-wide)
+  /// Show the completion overlay
   Future<void> showCompletionOverlay() async {
     if (_isShowing) {
       debugPrint("⚠️ Completion overlay already showing");
@@ -24,22 +24,29 @@ class CompletionOverlayService {
 
       debugPrint("🎉 Preparing to show completion overlay");
       
-      // IMPORTANT: First, make sure blocking is disabled and any blocking overlay is closed
+      // First, disable blocking to ensure no conflicts
       await AppBlockManager.instance.disableBlocking();
       
-      // Wait a moment to ensure blocking overlay is fully closed
-      await Future.delayed(const Duration(milliseconds: 300));
+      // Wait a moment
+      await Future.delayed(const Duration(milliseconds: 200));
       
       _isShowing = true;
 
-      debugPrint("🎉 Showing completion overlay NOW");
-      
-      // Show the completion overlay using the completionOverlayMain entry point
-      await FlutterOverlayWindow.showOverlay(
-        enableDrag: false,
-        flag: OverlayFlag.defaultFlag,
-        visibility: NotificationVisibility.visibilityPublic,
-      );
+      // If overlay is already active, just change the content
+      if (await FlutterOverlayWindow.isActive()) {
+        debugPrint("🔄 Updating existing overlay to completion type");
+        await FlutterOverlayWindow.shareData('completion');
+      } else {
+        debugPrint("🎉 Showing new completion overlay");
+        // Send message to set overlay type to completion
+        await FlutterOverlayWindow.shareData('completion');
+        
+        await FlutterOverlayWindow.showOverlay(
+          enableDrag: false,
+          flag: OverlayFlag.defaultFlag,
+          visibility: NotificationVisibility.visibilityPublic,
+        );
+      }
 
       debugPrint("✅ Completion overlay shown");
     } catch (e) {
