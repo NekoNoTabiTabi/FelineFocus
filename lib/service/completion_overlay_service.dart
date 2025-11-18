@@ -15,7 +15,7 @@ class CompletionOverlayService {
       debugPrint("⚠️ Completion overlay already showing");
       return;
     }
-
+    
     try {
       // Ensure overlay permission
       if (!await FlutterOverlayWindow.isPermissionGranted()) {
@@ -57,8 +57,7 @@ class CompletionOverlayService {
           enableDrag: false,
           flag: OverlayFlag.defaultFlag,
           visibility: NotificationVisibility.visibilityPublic,
-          height: WindowSize.matchParent,
-          width: WindowSize.matchParent,
+          
           alignment: OverlayAlignment.center,
           positionGravity: PositionGravity.none,
         );

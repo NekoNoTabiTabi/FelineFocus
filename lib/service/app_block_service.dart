@@ -192,9 +192,8 @@ class AppBlockManager {
         enableDrag: false,
         flag: OverlayFlag.defaultFlag,
         visibility: NotificationVisibility.visibilityPublic,
-        height: WindowSize.matchParent,
-        width: WindowSize.matchParent,
-        
+       
+        alignment: OverlayAlignment.center,
         positionGravity: PositionGravity.none,
       );
     }
