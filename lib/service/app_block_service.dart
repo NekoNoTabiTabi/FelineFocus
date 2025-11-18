@@ -3,20 +3,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_accessibility_service/flutter_accessibility_service.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import '../overlays/overlay_manager.dart';
+import '../models/blocked_app_section.dart';
 
 class AppBlockManager {
   AppBlockManager._();
   static final AppBlockManager instance = AppBlockManager._();
 
-  final List<String> _blockedApps = [];
+  final List<BlockedAppSection> _blockedAppSections = [];
   StreamSubscription? _subscription;
   bool _blockingEnabled = false;
   bool _isListening = false;
 
   String? _lastBlockedPackage;
+  String? _lastWindowContent;
 
   /// Get current blocked apps (read-only)
-  List<String> get blockedApps => List.unmodifiable(_blockedApps);
+  List<BlockedAppSection> get blockedAppSections => List.unmodifiable(_blockedAppSections);
   
   /// Check if blocking is currently active
   bool get isBlockingEnabled => _blockingEnabled;
@@ -24,12 +26,12 @@ class AppBlockManager {
   /// Check if accessibility listener is active
   bool get isListening => _isListening;
 
-  /// Update blocked apps dynamically from settings
-  void setBlockedApps(List<String> packages) {
-    _blockedApps
+  /// Update blocked app sections dynamically from settings
+  void setBlockedAppSections(List<BlockedAppSection> sections) {
+    _blockedAppSections
       ..clear()
-      ..addAll(packages);
-    debugPrint("🔒 Updated blocked apps: $_blockedApps");
+      ..addAll(sections);
+    debugPrint("🔒 Updated blocked app sections: ${_blockedAppSections.length} entries");
   }
 
   /// Initialize permissions only (don't start listening yet)
@@ -67,7 +69,20 @@ class AppBlockManager {
       final packageName = event.packageName;
       if (packageName == null) return;
 
-      debugPrint("📱 [Event] Package: $packageName | Type: ${event.eventType}");
+      // Get available event data - check what's actually available
+      final eventType = event.eventType.toString() ?? "";
+      final capturedText = event.nodeId.toString() ?? "";
+      
+      // Try to get window/screen information from the event
+      String windowContent = "";
+      try {
+        // Some events might have text content
+        windowContent = capturedText;
+      } catch (e) {
+        debugPrint("⚠️ Error accessing event content: $e");
+      }
+      
+      debugPrint("📱 [Event] Package: $packageName | Type: $eventType | Text: $capturedText}");
 
       // Only block if blocking is enabled
       if (!_blockingEnabled) {
@@ -79,27 +94,69 @@ class AppBlockManager {
       overlayProcessing = true;
 
       try {
-        if (_blockedApps.contains(packageName) && _lastBlockedPackage != packageName) {
-          debugPrint("🚫 [Block Triggered] App: $packageName");
+        // Check if this app/section should be blocked
+        final shouldBlock = _shouldBlockPackage(packageName, windowContent, eventType);
+        
+        if (shouldBlock && (_lastBlockedPackage != packageName || _lastWindowContent != windowContent)) {
+          debugPrint("🚫 [Block Triggered] Package: $packageName, Content: $windowContent");
           _lastBlockedPackage = packageName;
+          _lastWindowContent = windowContent;
           await _showBlockingOverlay();
         } else if (_lastBlockedPackage != null && packageName != "com.example.felinefocused") {
-          debugPrint("✅ [Unblocked] App switched from $_lastBlockedPackage to $packageName");
-          _lastBlockedPackage = null;
-          await _hideOverlay();
+          // User switched to a different, non-blocked context
+          final stillBlocked = _shouldBlockPackage(packageName, windowContent, eventType);
+          if (!stillBlocked) {
+            debugPrint("✅ [Unblocked] Switched from $_lastBlockedPackage to $packageName");
+            _lastBlockedPackage = null;
+            _lastWindowContent = null;
+            await _hideOverlay();
+          }
         }
       } finally {
         overlayProcessing = false;
       }
     });
     
-    debugPrint("🎧 Accessibility listener started - monitoring ${_blockedApps.length} apps");
+    debugPrint("🎧 Accessibility listener started - monitoring ${_blockedAppSections.length} app sections");
+  }
+
+  /// Check if a package should be blocked based on available event data
+  bool _shouldBlockPackage(String packageName, String windowContent, String eventType) {
+    for (final section in _blockedAppSections) {
+      // Check if package matches
+      if (section.packageName != packageName) continue;
+      
+      // If blocking entire app, block it
+      if (section.blockEntireApp) {
+        debugPrint("🎯 Blocking entire app: ${section.appName}");
+        return true;
+      }
+      
+      // If no keywords specified but app is in list, block it
+      if (section.blockedKeywords.isEmpty) {
+        debugPrint("🎯 Blocking app (no specific keywords): ${section.appName}");
+        return true;
+      }
+      
+      // Check if any blocked keywords match the available content
+      final combinedText = '${windowContent.toLowerCase()} ${eventType.toLowerCase()} $packageName'.toLowerCase();
+      
+      for (final keyword in section.blockedKeywords) {
+        if (combinedText.contains(keyword.toLowerCase())) {
+          debugPrint("🎯 Keyword match: '$keyword' found in event data");
+          return true;
+        }
+      }
+    }
+    
+    return false;
   }
 
   /// Stop accessibility monitoring (called when timer stops/resets)
   Future<void> disableBlocking() async {
     _blockingEnabled = false;
     _lastBlockedPackage = null;
+    _lastWindowContent = null;
     
     // Stop listening to accessibility events
     await _subscription?.cancel();
@@ -137,7 +194,7 @@ class AppBlockManager {
         visibility: NotificationVisibility.visibilityPublic,
         height: WindowSize.matchParent,
         width: WindowSize.matchParent,
-        alignment: OverlayAlignment.center,
+        
         positionGravity: PositionGravity.none,
       );
     }

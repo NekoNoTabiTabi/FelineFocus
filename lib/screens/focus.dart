@@ -29,17 +29,7 @@ class _FocusScreenState extends State<FocusScreen> {
         }
       };
       
-      // Validate before starting
-      if (timeProvider.selectedApps.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please select apps to block first!'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        return;
-      }
-      
+     
       if (timeProvider.remainingTime <= 0) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -171,13 +161,7 @@ class _FocusScreenState extends State<FocusScreen> {
                       ),
                     ),
                     const SizedBox(height: 5),
-                    Text(
-                      "Blocking ${timeProvider.selectedApps.length} apps",
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: timeProvider.isRunning ? Colors.green.shade700 : Colors.grey,
-                      ),
-                    ),
+                    
                   ],
                 ),
               ),

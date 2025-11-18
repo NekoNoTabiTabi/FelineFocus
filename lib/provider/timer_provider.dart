@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../service/app_block_service.dart';
 import '../service/completion_overlay_service.dart';
+import '../models/blocked_app_section.dart';
 
 class TimeProvider extends ChangeNotifier {
   int _remainingTime = 0;
@@ -13,16 +15,16 @@ class TimeProvider extends ChangeNotifier {
   // Callback for when timer completes (in-app UI)
   void Function()? onTimerComplete;
 
-  List<String> _selectedApps = [];
+  List<BlockedAppSection> _selectedAppSections = [];
 
   // SharedPreferences keys
   static const String _keyInitialTime = 'initial_time';
-  static const String _keySelectedApps = 'selected_apps';
+  static const String _keySelectedAppSections = 'selected_app_sections';
 
   int get remainingTime => _remainingTime;
   int get initialTime => _initialTime;
   bool get isRunning => _isRunning;
-  List<String> get selectedApps => _selectedApps;
+  List<BlockedAppSection> get selectedAppSections => _selectedAppSections;
 
   /// Initialize and load saved data
   Future<void> initialize() async {
@@ -42,11 +44,13 @@ class TimeProvider extends ChangeNotifier {
         debugPrint("📂 Loaded saved timer: ${_formatTime(savedTime)}");
       }
       
-      // Load selected apps
-      final savedApps = prefs.getStringList(_keySelectedApps) ?? [];
-      if (savedApps.isNotEmpty) {
-        _selectedApps = savedApps;
-        debugPrint("📂 Loaded ${savedApps.length} saved apps");
+      // Load selected app sections
+      final savedSectionsJson = prefs.getStringList(_keySelectedAppSections) ?? [];
+      if (savedSectionsJson.isNotEmpty) {
+        _selectedAppSections = savedSectionsJson
+            .map((json) => BlockedAppSection.fromJson(jsonDecode(json)))
+            .toList();
+        debugPrint("📂 Loaded ${_selectedAppSections.length} saved app sections");
       }
       
       notifyListeners();
@@ -66,27 +70,30 @@ class TimeProvider extends ChangeNotifier {
     }
   }
 
-  /// Save selected apps to preferences
-  Future<void> _saveSelectedApps() async {
+  /// Save selected app sections to preferences
+  Future<void> _saveSelectedAppSections() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setStringList(_keySelectedApps, _selectedApps);
-      debugPrint("💾 Saved ${_selectedApps.length} selected apps");
+      final jsonList = _selectedAppSections
+          .map((section) => jsonEncode(section.toJson()))
+          .toList();
+      await prefs.setStringList(_keySelectedAppSections, jsonList);
+      debugPrint("💾 Saved ${_selectedAppSections.length} selected app sections");
     } catch (e) {
-      debugPrint("❌ Error saving selected apps: $e");
+      debugPrint("❌ Error saving selected app sections: $e");
     }
   }
 
   void setTime(int seconds) {
     _remainingTime = seconds;
     _initialTime = seconds;
-    _saveInitialTime(); // Save to preferences
+    _saveInitialTime();
     notifyListeners();
   }
 
-  void updateSelectedApps(List<String> apps) {
-    _selectedApps = apps;
-    _saveSelectedApps(); // Save to preferences
+  void updateSelectedAppSections(List<BlockedAppSection> sections) {
+    _selectedAppSections = sections;
+    _saveSelectedAppSections();
     notifyListeners();
   }
 
@@ -96,7 +103,7 @@ class TimeProvider extends ChangeNotifier {
     _isRunning = true;
     
     // Enable app blocking when timer starts
-    AppBlockManager.instance.setBlockedApps(_selectedApps);
+    AppBlockManager.instance.setBlockedAppSections(_selectedAppSections);
     await AppBlockManager.instance.enableBlocking();
     
     notifyListeners();
@@ -106,7 +113,6 @@ class TimeProvider extends ChangeNotifier {
         _remainingTime--;
         notifyListeners();
       } else {
-        // Timer completed - stop but don't reset values
         await _onTimerComplete();
       }
     });
@@ -118,46 +124,33 @@ class TimeProvider extends ChangeNotifier {
     _timer?.cancel();
     _timer = null;
 
-    // Disable app blocking
     await AppBlockManager.instance.disableBlocking();
-    
-    // Reset remaining time to initial value (NOT to 0)
     _remainingTime = _initialTime;
     
     notifyListeners();
     
-    // Show system-wide completion overlay
     await CompletionOverlayService.instance.showCompletionOverlayWithAutoClose(
       duration: const Duration(seconds: 10),
     );
     
-    // Also trigger in-app callback if available
     onTimerComplete?.call();
   }
 
-  /// Stop/Pause timer - resets to initial value but keeps the setting
   Future<void> stopTimer() async {
     _isRunning = false;
     _timer?.cancel();
     _timer = null;
-
-    // Reset remaining time to initial value (ready for next session)
     _remainingTime = _initialTime;
-
-    // Disable app blocking when timer stops
     await AppBlockManager.instance.disableBlocking();
-    
     notifyListeners();
   }
 
-  /// Completely reset and clear the timer (only used when intentionally clearing)
   Future<void> resetTimer() async {
     _timer?.cancel();
     _isRunning = false;
     _remainingTime = 0;
     _initialTime = 0;
     
-    // Clear saved time
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_keyInitialTime);
@@ -166,37 +159,28 @@ class TimeProvider extends ChangeNotifier {
       debugPrint("❌ Error clearing saved timer: $e");
     }
     
-    // Disable app blocking when timer resets
     await AppBlockManager.instance.disableBlocking();
-    
-    // Close any active completion overlay
     await CompletionOverlayService.instance.hideCompletionOverlay();
-    
     notifyListeners();
   }
 
-  /// Restart timer with the same initial duration
   Future<void> restartTimer() async {
     _timer?.cancel();
     _isRunning = false;
     _remainingTime = _initialTime;
-    
     notifyListeners();
-    
-    // Start the timer again
     await startTimer();
   }
 
-  /// Clear all saved data (useful for settings/reset)
   Future<void> clearAllData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_keyInitialTime);
-      await prefs.remove(_keySelectedApps);
+      await prefs.remove(_keySelectedAppSections);
       
       _remainingTime = 0;
       _initialTime = 0;
-      _selectedApps.clear();
+      _selectedAppSections.clear();
       
       debugPrint("🗑️ Cleared all saved data");
       notifyListeners();
