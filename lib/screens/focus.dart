@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../provider/timer_provider.dart';
-import 'timer_complete_overlay.dart';
+import 'timer_complete_screen.dart';
 
 class FocusScreen extends StatefulWidget {
   const FocusScreen({super.key});
@@ -11,25 +11,27 @@ class FocusScreen extends StatefulWidget {
 }
 
 class _FocusScreenState extends State<FocusScreen> {
-  OverlayEntry? _overlayEntry;
 
   @override
   void initState() {
     super.initState();
 
-    // Set up timer completion callback for in-app overlay
     Future.microtask(() {
       final timeProvider = Provider.of<TimeProvider>(context, listen: false);
       
-      // Set callback for when timer completes (in-app overlay)
+      // Set callback to navigate to completion screen
       timeProvider.onTimerComplete = () {
-        // Only show in-app overlay if user is still in the app
         if (mounted) {
-          _showTimerCompleteOverlay();
+          // Navigate to completion screen
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => const TimerCompleteScreen(),
+            ),
+          );
+          print("⏰ Timer completed - navigating to completion screen");
         }
       };
       
-     
       if (timeProvider.remainingTime <= 0) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -48,37 +50,9 @@ class _FocusScreenState extends State<FocusScreen> {
 
   @override
   void dispose() {
-    // Clear callback and remove overlay when screen is disposed
     final timeProvider = Provider.of<TimeProvider>(context, listen: false);
     timeProvider.onTimerComplete = null;
-    _removeOverlay();
     super.dispose();
-  }
-
-  void _showTimerCompleteOverlay() {
-    if (_overlayEntry != null) return; // Prevent duplicate overlays
-
-    _overlayEntry = OverlayEntry(
-      builder: (context) => TimerCompleteOverlay(
-        onDismiss: () {
-          _removeOverlay();
-          Navigator.of(context).pop(); // Go back to homepage
-        },
-        onStartAnother: () {
-          _removeOverlay();
-          final timeProvider = Provider.of<TimeProvider>(context, listen: false);
-          // Restart with the same duration using restartTimer
-          timeProvider.restartTimer();
-        },
-      ),
-    );
-
-    Overlay.of(context).insert(_overlayEntry!);
-  }
-
-  void _removeOverlay() {
-    _overlayEntry?.remove();
-    _overlayEntry = null;
   }
 
   String _formatTime(int totalSeconds) {

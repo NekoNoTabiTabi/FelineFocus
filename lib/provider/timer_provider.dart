@@ -128,7 +128,7 @@ class TimeProvider extends ChangeNotifier {
     _remainingTime = _initialTime;
     
     notifyListeners();
-    
+   
     await CompletionOverlayService.instance.showCompletionOverlayWithAutoClose(
       duration: const Duration(seconds: 10),
     );

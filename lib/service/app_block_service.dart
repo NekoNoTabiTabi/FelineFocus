@@ -70,8 +70,8 @@ class AppBlockManager {
       if (packageName == null) return;
 
       // Get available event data - check what's actually available
-      final eventType = event.eventType.toString() ?? "";
-      final capturedText = event.nodeId.toString() ?? "";
+      final eventType = event.eventType.toString();
+      final capturedText = event.nodeId.toString();
       
       // Try to get window/screen information from the event
       String windowContent = "";

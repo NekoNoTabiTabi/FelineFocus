@@ -1,6 +1,5 @@
-
 import 'package:flutter/material.dart';
-import 'package:felinefocused/Screens/app_block_settings.dart';
+import 'package:felinefocused/Screens/app_block_settings.dart'; // Change this import
 import 'package:felinefocused/Screens/focus.dart';
 import 'package:felinefocused/utils/timer.dart';
 
@@ -11,14 +10,10 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      
-      body: 
-      
-      Center(
+      body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [           
-            // Set Timer
             TimerDisplay(),
 
             const SizedBox(height: 50),
@@ -29,8 +24,6 @@ class HomePage extends StatelessWidget {
              context,
              MaterialPageRoute(builder: (context) => const FocusScreen()),
              );
-
-             
              },
            style: ElevatedButton.styleFrom(
            backgroundColor: Colors.green,
@@ -49,26 +42,17 @@ class HomePage extends StatelessWidget {
             ElevatedButton(
               onPressed: () {           
                 Navigator.push(context,
-                MaterialPageRoute(builder: (context) => const BlockAppsScreen()),
+                MaterialPageRoute(builder: (context) => const BlockAppsScreen()), // Use new screen
                 );
               },
-
-
             style: ElevatedButton.styleFrom(
             backgroundColor: Colors.green,
             shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(30),
           ),
            ),
-
             child: const Text('App Block', style: TextStyle(fontSize: 18, color: Colors.white)),
-
             ),
-
-           
-
-
-
           ],
         ),
       ),
