@@ -4,29 +4,41 @@ import 'package:flutter_accessibility_service/flutter_accessibility_service.dart
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import '../overlays/overlay_manager.dart';
 import '../models/blocked_app_section.dart';
+import '../models/reels_config.dart';
 
 class AppBlockManager {
   AppBlockManager._();
   static final AppBlockManager instance = AppBlockManager._();
 
   final List<BlockedAppSection> _blockedAppSections = [];
+  bool _blockReels = false;
   StreamSubscription? _subscription;
   bool _blockingEnabled = false;
   bool _isListening = false;
 
   String? _lastBlockedPackage;
-  String? _lastWindowContent;
+  String? _lastBlockedNodeId;
+  
+  // NEW: Debouncing for reels detection
+  Timer? _reelsDebounceTimer;
+  bool _isReelsBlocked = false;
+  String? _currentReelsPackage;
+  
+  // NEW: Keep track of which type of blocking is active
+  BlockingType? _currentBlockingType;
 
-  /// Get current blocked apps (read-only)
+  // Debug modes
+  static const bool _debugMode = true;
+  static const bool _debugSubNodes = false; // Set to true when you need detailed info
+
+  // Configuration
+  static const Duration _reelsDebounceDelay = Duration(milliseconds: 100000); // Keep overlay active for 1.5s after last reels detection
+
   List<BlockedAppSection> get blockedAppSections => List.unmodifiable(_blockedAppSections);
-  
-  /// Check if blocking is currently active
+  bool get blockReels => _blockReels;
   bool get isBlockingEnabled => _blockingEnabled;
-  
-  /// Check if accessibility listener is active
   bool get isListening => _isListening;
 
-  /// Update blocked app sections dynamically from settings
   void setBlockedAppSections(List<BlockedAppSection> sections) {
     _blockedAppSections
       ..clear()
@@ -34,16 +46,18 @@ class AppBlockManager {
     debugPrint("🔒 Updated blocked app sections: ${_blockedAppSections.length} entries");
   }
 
-  /// Initialize permissions only (don't start listening yet)
+  void setBlockReels(bool value) {
+    _blockReels = value;
+    debugPrint("🎬 Reels blocking set to: $value");
+  }
+
   Future<void> initialize() async {
     debugPrint("🔧 Initializing AppBlockManager (permissions only)");
     
-    // Ensure overlay permission
     if (!await FlutterOverlayWindow.isPermissionGranted()) {
       await FlutterOverlayWindow.requestPermission();
     }
     
-    // Check accessibility permission (but don't start listening)
     if (!await FlutterAccessibilityService.isAccessibilityPermissionEnabled()) {
       await FlutterAccessibilityService.requestAccessibilityPermission();
     }
@@ -51,7 +65,6 @@ class AppBlockManager {
     debugPrint("✅ AppBlockManager initialized (ready to start)");
   }
 
-  /// Start accessibility monitoring (called when timer starts)
   Future<void> enableBlocking() async {
     if (_isListening) {
       debugPrint("⚠️ Already listening to accessibility events");
@@ -62,6 +75,8 @@ class AppBlockManager {
     _isListening = true;
     
     debugPrint("✅ Starting accessibility service monitoring");
+    debugPrint("📋 Blocking ${_blockedAppSections.length} apps");
+    debugPrint("🎬 Reels blocking: $_blockReels");
 
     bool overlayProcessing = false;
 
@@ -69,96 +84,179 @@ class AppBlockManager {
       final packageName = event.packageName;
       if (packageName == null) return;
 
-      // Get available event data - check what's actually available
-      final eventType = event.eventType.toString();
-      final capturedText = event.nodeId.toString();
-      
-      // Try to get window/screen information from the event
-      String windowContent = "";
-      try {
-        // Some events might have text content
-        windowContent = capturedText;
-      } catch (e) {
-        debugPrint("⚠️ Error accessing event content: $e");
-      }
-      
-      debugPrint("📱 [Event] Package: $packageName | Type: $eventType | Text: $capturedText}");
+      // Skip our own app
+      if (packageName == "com.example.felinefocused") return;
 
-      // Only block if blocking is enabled
-      if (!_blockingEnabled) {
-        return;
-      }
+      final nodeId = event.nodeId?.toString() ?? "";
+      final eventType = event.eventType?.toString() ?? "";
+      final subNodes = event.subNodes;
 
+      if (!_blockingEnabled) return;
       if (overlayProcessing) return;
 
       overlayProcessing = true;
 
       try {
-        // Check if this app/section should be blocked
-        final shouldBlock = _shouldBlockPackage(packageName, windowContent, eventType);
+        // Check ENTIRE APP blocking first (this takes priority)
+        final isEntireAppBlocked = _isEntireAppBlocked(packageName);
         
-        if (shouldBlock && (_lastBlockedPackage != packageName || _lastWindowContent != windowContent)) {
-          debugPrint("🚫 [Block Triggered] Package: $packageName, Content: $windowContent");
-          _lastBlockedPackage = packageName;
-          _lastWindowContent = windowContent;
-          await _showBlockingOverlay();
-        } else if (_lastBlockedPackage != null && packageName != "com.example.felinefocused") {
-          // User switched to a different, non-blocked context
-          final stillBlocked = _shouldBlockPackage(packageName, windowContent, eventType);
-          if (!stillBlocked) {
-            debugPrint("✅ [Unblocked] Switched from $_lastBlockedPackage to $packageName");
+        if (isEntireAppBlocked) {
+          // ENTIRE APP BLOCKING - immediate and persistent
+          if (_currentBlockingType != BlockingType.entireApp || _lastBlockedPackage != packageName) {
+            debugPrint("🎯 [ENTIRE APP BLOCKED] ${_getAppName(packageName)}");
+            _currentBlockingType = BlockingType.entireApp;
+            _lastBlockedPackage = packageName;
+            _isReelsBlocked = false;
+            _currentReelsPackage = null;
+            _reelsDebounceTimer?.cancel();
+            await _showBlockingOverlay();
+          }
+        } else if (_blockReels && ReelsConfig.hasReelsContent(packageName)) {
+          // REELS BLOCKING - check for reels content with debouncing
+          final isReelsDetected = _detectReelsInContent(packageName, nodeId, subNodes);
+          
+          if (isReelsDetected) {
+            // Reels detected - show overlay and reset debounce timer
+            _currentReelsPackage = packageName;
+            
+            if (!_isReelsBlocked || _currentBlockingType != BlockingType.reels) {
+              debugPrint("🎬 [REELS BLOCKED] ${ReelsConfig.getFriendlyName(packageName)}");
+              _currentBlockingType = BlockingType.reels;
+              _isReelsBlocked = true;
+              await _showBlockingOverlay();
+            }
+            
+            // Reset debounce timer - keep overlay active
+            _reelsDebounceTimer?.cancel();
+            _reelsDebounceTimer = Timer(_reelsDebounceDelay, () async {
+              // After delay, if still in same app, check if reels still detected
+              if (_currentReelsPackage == packageName && _isReelsBlocked) {
+                debugPrint("⏱️ [REELS DEBOUNCE] Checking if user left reels section...");
+                // Don't hide yet, wait for actual navigation away
+              }
+            });
+            
+          } else if (_isReelsBlocked && _currentReelsPackage == packageName) {
+            // Was blocked, but no longer detecting reels in this package
+            // Start debounce timer to hide overlay
+            _reelsDebounceTimer?.cancel();
+            _reelsDebounceTimer = Timer(_reelsDebounceDelay, () async {
+              debugPrint("✅ [REELS UNBLOCKED] User left reels section");
+              _isReelsBlocked = false;
+              _currentReelsPackage = null;
+              _currentBlockingType = null;
+              await _hideOverlay();
+            });
+          }
+        } else {
+          // Not blocked at all - hide overlay if it was showing
+          if (_currentBlockingType != null) {
+            debugPrint("✅ [UNBLOCKED] Switched to safe app: $packageName");
+            _currentBlockingType = null;
             _lastBlockedPackage = null;
-            _lastWindowContent = null;
+            _isReelsBlocked = false;
+            _currentReelsPackage = null;
+            _reelsDebounceTimer?.cancel();
             await _hideOverlay();
           }
         }
+
       } finally {
         overlayProcessing = false;
       }
     });
     
-    debugPrint("🎧 Accessibility listener started - monitoring ${_blockedAppSections.length} app sections");
+    debugPrint("🎧 Accessibility listener started");
   }
 
-  /// Check if a package should be blocked based on available event data
-  bool _shouldBlockPackage(String packageName, String windowContent, String eventType) {
+  /// Check if entire app is blocked (simple and direct)
+  bool _isEntireAppBlocked(String packageName) {
     for (final section in _blockedAppSections) {
-      // Check if package matches
-      if (section.packageName != packageName) continue;
-      
-      // If blocking entire app, block it
-      if (section.blockEntireApp) {
-        debugPrint("🎯 Blocking entire app: ${section.appName}");
+      if (section.packageName == packageName && section.blockEntireApp) {
         return true;
       }
-      
-      // If no keywords specified but app is in list, block it
-      if (section.blockedKeywords.isEmpty) {
-        debugPrint("🎯 Blocking app (no specific keywords): ${section.appName}");
-        return true;
-      }
-      
-      // Check if any blocked keywords match the available content
-      final combinedText = '${windowContent.toLowerCase()} ${eventType.toLowerCase()} $packageName'.toLowerCase();
-      
-      for (final keyword in section.blockedKeywords) {
-        if (combinedText.contains(keyword.toLowerCase())) {
-          debugPrint("🎯 Keyword match: '$keyword' found in event data");
-          return true;
+    }
+    return false;
+  }
+
+  /// Detect reels in content (nodeId and subNodes)
+  bool _detectReelsInContent(String packageName, String nodeId, List<dynamic>? subNodes) {
+    final keywords = ReelsConfig.getKeywords(packageName);
+    final nodeIdLower = nodeId.toLowerCase();
+    
+    // Check main nodeId for keywords
+    for (final keyword in keywords) {
+      if (nodeIdLower.contains(keyword.toLowerCase())) {
+        if (_debugMode) {
+          debugPrint("🎬 Reels keyword '$keyword' found in NodeId");
         }
+        return true;
+      }
+    }
+    
+    // Check subNodes for keywords
+    if (subNodes != null && subNodes.isNotEmpty) {
+      final subNodeKeywords = _findReelsKeywordsInSubNodes(subNodes, packageName);
+      if (subNodeKeywords.isNotEmpty) {
+        if (_debugMode) {
+          debugPrint("🎬 Reels keywords found in SubNodes: ${subNodeKeywords.join(', ')}");
+        }
+        return true;
       }
     }
     
     return false;
   }
 
-  /// Stop accessibility monitoring (called when timer stops/resets)
+  /// Helper to get app name for logging
+  String _getAppName(String packageName) {
+    for (final section in _blockedAppSections) {
+      if (section.packageName == packageName) {
+        return section.appName;
+      }
+    }
+    return packageName;
+  }
+
+  /// Find reels keywords in subNodes
+  List<String> _findReelsKeywordsInSubNodes(List<dynamic> subNodes, String packageName) {
+    final keywords = ReelsConfig.getKeywords(packageName);
+    final foundKeywords = <String>[];
+    
+    for (final subNode in subNodes) {
+      try {
+        // Combine all text fields from subNode
+        final subNodeText = [
+          subNode.nodeId?.toString() ?? "",
+          subNode.text?.toString() ?? "",
+          subNode.contentDescription?.toString() ?? "",
+          subNode.viewIdResourceName?.toString() ?? "",
+          subNode.className?.toString() ?? "",
+        ].join(" ").toLowerCase();
+        
+        // Check for keyword matches
+        for (final keyword in keywords) {
+          if (subNodeText.contains(keyword.toLowerCase()) && !foundKeywords.contains(keyword)) {
+            foundKeywords.add(keyword);
+          }
+        }
+      } catch (e) {
+        // Silently continue if we can't read a subNode
+      }
+    }
+    
+    return foundKeywords;
+  }
+
   Future<void> disableBlocking() async {
     _blockingEnabled = false;
     _lastBlockedPackage = null;
-    _lastWindowContent = null;
+    _lastBlockedNodeId = null;
+    _isReelsBlocked = false;
+    _currentReelsPackage = null;
+    _currentBlockingType = null;
+    _reelsDebounceTimer?.cancel();
     
-    // Stop listening to accessibility events
     await _subscription?.cancel();
     _subscription = null;
     _isListening = false;
@@ -168,42 +266,39 @@ class AppBlockManager {
     debugPrint("❌ Accessibility service stopped - App blocking DISABLED");
   }
 
-  /// Dispose listener and hide overlay
   Future<void> dispose() async {
     await disableBlocking();
     debugPrint("🗑️ AppBlockManager disposed");
   }
 
-  /// Show blocking overlay with proper full-screen configuration
   Future<void> _showBlockingOverlay() async {
     if (!await FlutterOverlayWindow.isActive()) {
       debugPrint("🪟 [Overlay] Displaying blocking screen");
       
-      // Set overlay type to blocking
       OverlayManager.setOverlayType(OverlayType.blocking);
-      
-      // Send message to overlay
       await FlutterOverlayWindow.shareData('blocking');
-      
-      // Small delay
       await Future.delayed(const Duration(milliseconds: 100));
 
       await FlutterOverlayWindow.showOverlay(
         enableDrag: false,
         flag: OverlayFlag.defaultFlag,
         visibility: NotificationVisibility.visibilityPublic,
-       
         alignment: OverlayAlignment.center,
         positionGravity: PositionGravity.none,
       );
     }
   }
 
-  /// Hide overlay if active
   Future<void> _hideOverlay() async {
     if (await FlutterOverlayWindow.isActive()) {
       debugPrint("🪟 [Overlay] Hiding overlay screen");
       await FlutterOverlayWindow.closeOverlay();
     }
   }
+}
+
+/// Enum to track what type of blocking is active
+enum BlockingType {
+  entireApp,  // Blocking entire app - persistent
+  reels,      // Blocking reels content - debounced
 }

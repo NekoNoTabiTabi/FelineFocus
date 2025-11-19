@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../service/app_block_service.dart';
 import '../service/completion_overlay_service.dart';
 import '../models/blocked_app_section.dart';
+import '../models/reels_config.dart';
 
 class TimeProvider extends ChangeNotifier {
   int _remainingTime = 0;
@@ -12,26 +13,26 @@ class TimeProvider extends ChangeNotifier {
   bool _isRunning = false;
   Timer? _timer;
   
-  // Callback for when timer completes (in-app UI)
   void Function()? onTimerComplete;
 
   List<BlockedAppSection> _selectedAppSections = [];
+  bool _blockReels = false; // NEW: Track reels blocking
 
   // SharedPreferences keys
   static const String _keyInitialTime = 'initial_time';
   static const String _keySelectedAppSections = 'selected_app_sections';
+  static const String _keyBlockReels = 'block_reels'; // NEW
 
   int get remainingTime => _remainingTime;
   int get initialTime => _initialTime;
   bool get isRunning => _isRunning;
   List<BlockedAppSection> get selectedAppSections => _selectedAppSections;
+  bool get blockReels => _blockReels; // NEW
 
-  /// Initialize and load saved data
   Future<void> initialize() async {
     await _loadSavedData();
   }
 
-  /// Load saved timer and apps data
   Future<void> _loadSavedData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -53,13 +54,16 @@ class TimeProvider extends ChangeNotifier {
         debugPrint("📂 Loaded ${_selectedAppSections.length} saved app sections");
       }
       
+      // NEW: Load reels blocking preference
+      _blockReels = prefs.getBool(_keyBlockReels) ?? false;
+      debugPrint("📂 Loaded reels blocking: $_blockReels");
+      
       notifyListeners();
     } catch (e) {
       debugPrint("❌ Error loading saved data: $e");
     }
   }
 
-  /// Save initial time to preferences
   Future<void> _saveInitialTime() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -70,7 +74,6 @@ class TimeProvider extends ChangeNotifier {
     }
   }
 
-  /// Save selected app sections to preferences
   Future<void> _saveSelectedAppSections() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -81,6 +84,17 @@ class TimeProvider extends ChangeNotifier {
       debugPrint("💾 Saved ${_selectedAppSections.length} selected app sections");
     } catch (e) {
       debugPrint("❌ Error saving selected app sections: $e");
+    }
+  }
+
+  // NEW: Save reels blocking preference
+  Future<void> _saveBlockReels() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_keyBlockReels, _blockReels);
+      debugPrint("💾 Saved reels blocking: $_blockReels");
+    } catch (e) {
+      debugPrint("❌ Error saving reels blocking: $e");
     }
   }
 
@@ -97,13 +111,21 @@ class TimeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // NEW: Toggle reels blocking
+  Future<void> setBlockReels(bool value) async {
+    _blockReels = value;
+    await _saveBlockReels();
+    notifyListeners();
+  }
+
   Future<void> startTimer() async {
     if (_remainingTime <= 0) return;
 
     _isRunning = true;
     
-    // Enable app blocking when timer starts
+    // Pass both app sections and reels blocking status
     AppBlockManager.instance.setBlockedAppSections(_selectedAppSections);
+    AppBlockManager.instance.setBlockReels(_blockReels); // NEW
     await AppBlockManager.instance.enableBlocking();
     
     notifyListeners();
@@ -118,7 +140,6 @@ class TimeProvider extends ChangeNotifier {
     });
   }
 
-  /// Called when timer reaches 0
   Future<void> _onTimerComplete() async {
     _isRunning = false;
     _timer?.cancel();
@@ -128,7 +149,7 @@ class TimeProvider extends ChangeNotifier {
     _remainingTime = _initialTime;
     
     notifyListeners();
-   
+    
     await CompletionOverlayService.instance.showCompletionOverlayWithAutoClose(
       duration: const Duration(seconds: 10),
     );
@@ -177,10 +198,12 @@ class TimeProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_keyInitialTime);
       await prefs.remove(_keySelectedAppSections);
+      await prefs.remove(_keyBlockReels); // NEW
       
       _remainingTime = 0;
       _initialTime = 0;
       _selectedAppSections.clear();
+      _blockReels = false; // NEW
       
       debugPrint("🗑️ Cleared all saved data");
       notifyListeners();
