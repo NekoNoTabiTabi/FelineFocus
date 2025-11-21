@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../provider/timer_provider.dart';
 import '../models/blocked_app_section.dart';
 import '../models/reels_config.dart';
+import '../service/app_block_service.dart';
 
 class BlockAppsScreen extends StatefulWidget {
   const BlockAppsScreen({super.key});
@@ -73,14 +74,14 @@ class _BlockAppsScreenState extends State<BlockAppsScreen> {
                   margin: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [Colors.purple.shade400, Colors.deepPurple.shade600],
+                      colors: [Colors.green.shade400, Colors.green.shade600],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.purple.withOpacity(0.3),
+                        color: Colors.green.withOpacity(0.3),
                         blurRadius: 8,
                         offset: const Offset(0, 4),
                       ),
@@ -155,25 +156,50 @@ class _BlockAppsScreenState extends State<BlockAppsScreen> {
                   ),
                 ),
 
+Card(
+  child: SwitchListTile(
+    secondary: Icon(
+      Icons.exit_to_app,
+      color: context.watch<TimeProvider>().isRunning && AppBlockManager.instance.autoExitEnabled
+          ? Colors.red
+          : Colors.grey,
+    ),
+    title: const Text('Auto-Exit Blocked Apps'),
+    subtitle: Text(
+      AppBlockManager.instance.autoExitEnabled
+          ? 'Apps will close automatically when blocked'
+          : 'Apps will be blocked with overlay only',
+    ),
+    value: AppBlockManager.instance.autoExitEnabled,
+    onChanged: (value) {
+      setState(() {
+        AppBlockManager.instance.setAutoExit(value);
+      });
+    },
+    activeColor: Colors.red,
+  ),
+),
+
+
                 // Show which apps will be affected by reels blocking
                 if (blockReels)
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 16),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.purple.shade50,
+                      color: Colors.green.shade50,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.purple.shade200),
+                      border: Border.all(color: Colors.green.shade200),
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.info_outline, color: Colors.purple.shade700, size: 20),
+                        Icon(Icons.info_outline, color: Colors.green.shade700, size: 20),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             'Shorts/Reels will be blocked in: ${ReelsConfig.getAllReelsApps().map((p) => ReelsConfig.getFriendlyName(p)).join(", ")}',
                             style: TextStyle(
-                              color: Colors.purple.shade700,
+                              color: Colors.green.shade700,
                               fontSize: 12,
                             ),
                           ),
@@ -247,11 +273,11 @@ class _BlockAppsScreenState extends State<BlockAppsScreen> {
                         subtitle: hasReels
                             ? Row(
                                 children: [
-                                  Icon(Icons.video_library, size: 14, color: Colors.purple.shade400),
+                                  Icon(Icons.video_library, size: 14, color: Colors.green.shade400),
                                   const SizedBox(width: 4),
                                   Text(
                                     'Has Reels/Shorts',
-                                    style: TextStyle(fontSize: 12, color: Colors.purple.shade400),
+                                    style: TextStyle(fontSize: 12, color: Colors.green.shade400),
                                   ),
                                 ],
                               )

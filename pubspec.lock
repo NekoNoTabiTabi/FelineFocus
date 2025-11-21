@@ -9,6 +9,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.0.0"
+  app_usage:
+    dependency: "direct main"
+    description:
+      name: app_usage
+      sha256: "782b4276fe3c42e1321c8ce720fdbb7fe932699ce1c7d81346ace54913dfe6e5"
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.0.1"
   async:
     dependency: transitive
     description:
@@ -65,6 +73,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.8"
+  device_apps:
+    dependency: "direct main"
+    description:
+      path: "packages/device_apps"
+      relative: true
+    source: path
+    version: "2.2.0"
   device_info_plus:
     dependency: transitive
     description:

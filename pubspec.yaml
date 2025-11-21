@@ -43,6 +43,8 @@ dependencies:
   flutter_accessibility_service: ^1.0.0
   vibration: ^3.1.4
   shared_preferences: ^2.5.3
+  app_usage: ^4.0.1
+  device_apps: ^2.2.0
 
 dev_dependencies:
   flutter_test:
@@ -96,3 +98,7 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+dependency_overrides:
+  device_apps:
+    path: packages/device_apps

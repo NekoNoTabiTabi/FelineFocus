@@ -1,0 +1,42 @@
+group 'fr.g123k.deviceapps'
+version '1.0-SNAPSHOT'
+
+buildscript {
+    repositories {
+        google()
+        jcenter()
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:4.0.1'
+    }
+}
+
+rootProject.allprojects {
+    repositories {
+        google()
+        jcenter()
+    }
+}
+
+apply plugin: 'com.android.library'
+
+android {
+    // Use a modern compileSdk so newer Android attributes (eg. lStar) are available
+    compileSdkVersion 33
+    // Added namespace to satisfy newer Android Gradle Plugin requirements
+    namespace 'com.flutter.device_apps'
+
+    defaultConfig {
+        minSdkVersion 16
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+    }
+
+    lintOptions {
+        disable 'InvalidPackage'
+    }
+
+    dependencies {
+        implementation 'androidx.annotation:annotation:1.2.0'
+    }
+}

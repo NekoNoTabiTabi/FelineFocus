@@ -5,6 +5,7 @@ import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import '../overlays/overlay_manager.dart';
 import '../models/blocked_app_section.dart';
 import '../models/reels_config.dart';
+import 'app_exit_service.dart'; // ADD THIS
 
 class AppBlockManager {
   AppBlockManager._();
@@ -12,6 +13,7 @@ class AppBlockManager {
 
   final List<BlockedAppSection> _blockedAppSections = [];
   bool _blockReels = false;
+  bool _autoExitEnabled = true; // NEW: Control auto-exit feature
   StreamSubscription? _subscription;
   bool _blockingEnabled = false;
   bool _isListening = false;
@@ -19,23 +21,24 @@ class AppBlockManager {
   String? _lastBlockedPackage;
   String? _lastBlockedNodeId;
   
-  // NEW: Debouncing for reels detection
   Timer? _reelsDebounceTimer;
   bool _isReelsBlocked = false;
   String? _currentReelsPackage;
   
-  // NEW: Keep track of which type of blocking is active
   BlockingType? _currentBlockingType;
 
-  // Debug modes
-  static const bool _debugMode = true;
-  static const bool _debugSubNodes = false; // Set to true when you need detailed info
+  // NEW: Auto-exit timer
+  Timer? _autoExitTimer;
+  static const Duration _autoExitDelay = Duration(milliseconds: 500);
 
-  // Configuration
-  static const Duration _reelsDebounceDelay = Duration(milliseconds: 100000); // Keep overlay active for 1.5s after last reels detection
+  static const bool _debugMode = true;
+  static const bool _debugSubNodes = false;
+
+  static const Duration _reelsDebounceDelay = Duration(milliseconds: 1500);
 
   List<BlockedAppSection> get blockedAppSections => List.unmodifiable(_blockedAppSections);
   bool get blockReels => _blockReels;
+  bool get autoExitEnabled => _autoExitEnabled; // NEW
   bool get isBlockingEnabled => _blockingEnabled;
   bool get isListening => _isListening;
 
@@ -49,6 +52,12 @@ class AppBlockManager {
   void setBlockReels(bool value) {
     _blockReels = value;
     debugPrint("🎬 Reels blocking set to: $value");
+  }
+
+  // NEW: Enable/disable auto-exit
+  void setAutoExit(bool value) {
+    _autoExitEnabled = value;
+    debugPrint("🚪 Auto-exit set to: $value");
   }
 
   Future<void> initialize() async {
@@ -77,6 +86,7 @@ class AppBlockManager {
     debugPrint("✅ Starting accessibility service monitoring");
     debugPrint("📋 Blocking ${_blockedAppSections.length} apps");
     debugPrint("🎬 Reels blocking: $_blockReels");
+    debugPrint("🚪 Auto-exit: $_autoExitEnabled");
 
     bool overlayProcessing = false;
 
@@ -84,7 +94,6 @@ class AppBlockManager {
       final packageName = event.packageName;
       if (packageName == null) return;
 
-      // Skip our own app
       if (packageName == "com.example.felinefocused") return;
 
       final nodeId = event.nodeId?.toString() ?? "";
@@ -97,7 +106,7 @@ class AppBlockManager {
       overlayProcessing = true;
 
       try {
-        // Check ENTIRE APP blocking first (this takes priority)
+        // Check ENTIRE APP blocking first
         final isEntireAppBlocked = _isEntireAppBlocked(packageName);
         
         if (isEntireAppBlocked) {
@@ -109,14 +118,19 @@ class AppBlockManager {
             _isReelsBlocked = false;
             _currentReelsPackage = null;
             _reelsDebounceTimer?.cancel();
+            
             await _showBlockingOverlay();
+            
+            // NEW: Schedule auto-exit for entire app blocking
+            if (_autoExitEnabled) {
+              _scheduleAutoExit(packageName);
+            }
           }
         } else if (_blockReels && ReelsConfig.hasReelsContent(packageName)) {
           // REELS BLOCKING - check for reels content with debouncing
           final isReelsDetected = _detectReelsInContent(packageName, nodeId, subNodes);
           
           if (isReelsDetected) {
-            // Reels detected - show overlay and reset debounce timer
             _currentReelsPackage = packageName;
             
             if (!_isReelsBlocked || _currentBlockingType != BlockingType.reels) {
@@ -124,27 +138,28 @@ class AppBlockManager {
               _currentBlockingType = BlockingType.reels;
               _isReelsBlocked = true;
               await _showBlockingOverlay();
+              
+              // NEW: Schedule auto-exit for reels (but with shorter delay)
+              if (_autoExitEnabled) {
+                _scheduleAutoExit(packageName, isReelsOnly: true);
+              }
             }
             
-            // Reset debounce timer - keep overlay active
             _reelsDebounceTimer?.cancel();
             _reelsDebounceTimer = Timer(_reelsDebounceDelay, () async {
-              // After delay, if still in same app, check if reels still detected
               if (_currentReelsPackage == packageName && _isReelsBlocked) {
                 debugPrint("⏱️ [REELS DEBOUNCE] Checking if user left reels section...");
-                // Don't hide yet, wait for actual navigation away
               }
             });
             
           } else if (_isReelsBlocked && _currentReelsPackage == packageName) {
-            // Was blocked, but no longer detecting reels in this package
-            // Start debounce timer to hide overlay
             _reelsDebounceTimer?.cancel();
             _reelsDebounceTimer = Timer(_reelsDebounceDelay, () async {
               debugPrint("✅ [REELS UNBLOCKED] User left reels section");
               _isReelsBlocked = false;
               _currentReelsPackage = null;
               _currentBlockingType = null;
+              _autoExitTimer?.cancel(); // Cancel auto-exit if user navigated away
               await _hideOverlay();
             });
           }
@@ -157,6 +172,7 @@ class AppBlockManager {
             _isReelsBlocked = false;
             _currentReelsPackage = null;
             _reelsDebounceTimer?.cancel();
+            _autoExitTimer?.cancel();
             await _hideOverlay();
           }
         }
@@ -169,7 +185,25 @@ class AppBlockManager {
     debugPrint("🎧 Accessibility listener started");
   }
 
-  /// Check if entire app is blocked (simple and direct)
+  /// NEW: Schedule automatic app exit
+  void _scheduleAutoExit(String packageName, {bool isReelsOnly = false}) {
+    _autoExitTimer?.cancel();
+    
+    // For entire app blocks, exit faster
+    final delay = isReelsOnly 
+        ? const Duration(seconds: 2) 
+        : _autoExitDelay;
+    
+    _autoExitTimer = Timer(delay, () async {
+      debugPrint("🚪 [AUTO-EXIT] Closing $packageName");
+      await AppExitService.instance.closeAppAndGoHome(packageName);
+      
+      // Hide overlay after closing app
+      await Future.delayed(const Duration(milliseconds: 300));
+      await _hideOverlay();
+    });
+  }
+
   bool _isEntireAppBlocked(String packageName) {
     for (final section in _blockedAppSections) {
       if (section.packageName == packageName && section.blockEntireApp) {
@@ -179,12 +213,10 @@ class AppBlockManager {
     return false;
   }
 
-  /// Detect reels in content (nodeId and subNodes)
   bool _detectReelsInContent(String packageName, String nodeId, List<dynamic>? subNodes) {
     final keywords = ReelsConfig.getKeywords(packageName);
     final nodeIdLower = nodeId.toLowerCase();
     
-    // Check main nodeId for keywords
     for (final keyword in keywords) {
       if (nodeIdLower.contains(keyword.toLowerCase())) {
         if (_debugMode) {
@@ -194,7 +226,6 @@ class AppBlockManager {
       }
     }
     
-    // Check subNodes for keywords
     if (subNodes != null && subNodes.isNotEmpty) {
       final subNodeKeywords = _findReelsKeywordsInSubNodes(subNodes, packageName);
       if (subNodeKeywords.isNotEmpty) {
@@ -208,7 +239,6 @@ class AppBlockManager {
     return false;
   }
 
-  /// Helper to get app name for logging
   String _getAppName(String packageName) {
     for (final section in _blockedAppSections) {
       if (section.packageName == packageName) {
@@ -218,14 +248,12 @@ class AppBlockManager {
     return packageName;
   }
 
-  /// Find reels keywords in subNodes
   List<String> _findReelsKeywordsInSubNodes(List<dynamic> subNodes, String packageName) {
     final keywords = ReelsConfig.getKeywords(packageName);
     final foundKeywords = <String>[];
     
     for (final subNode in subNodes) {
       try {
-        // Combine all text fields from subNode
         final subNodeText = [
           subNode.nodeId?.toString() ?? "",
           subNode.text?.toString() ?? "",
@@ -234,14 +262,13 @@ class AppBlockManager {
           subNode.className?.toString() ?? "",
         ].join(" ").toLowerCase();
         
-        // Check for keyword matches
         for (final keyword in keywords) {
           if (subNodeText.contains(keyword.toLowerCase()) && !foundKeywords.contains(keyword)) {
             foundKeywords.add(keyword);
           }
         }
       } catch (e) {
-        // Silently continue if we can't read a subNode
+        // Silently continue
       }
     }
     
@@ -256,6 +283,7 @@ class AppBlockManager {
     _currentReelsPackage = null;
     _currentBlockingType = null;
     _reelsDebounceTimer?.cancel();
+    _autoExitTimer?.cancel(); // NEW: Cancel auto-exit timer
     
     await _subscription?.cancel();
     _subscription = null;
@@ -297,8 +325,7 @@ class AppBlockManager {
   }
 }
 
-/// Enum to track what type of blocking is active
 enum BlockingType {
-  entireApp,  // Blocking entire app - persistent
-  reels,      // Blocking reels content - debounced
+  entireApp,
+  reels,
 }
