@@ -3,7 +3,7 @@ import 'package:flutter_accessibility_service/flutter_accessibility_service.dart
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import 'package:provider/provider.dart';
 import '../provider/timer_provider.dart';
-
+import '../provider/auth_provider.dart';
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
 
@@ -104,6 +104,124 @@ class _SettingsPageState extends State<SettingsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+
+
+                     const SizedBox(height: 32),
+
+                  // Account Section
+                  const Text(
+                    'Account',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // User Info Card
+                  Consumer<AuthProvider>(
+                    builder: (context, authProvider, _) {
+                      return Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 30,
+                                    backgroundColor: Colors.green.shade100,
+                                    backgroundImage: authProvider.userPhotoUrl != null
+                                        ? NetworkImage(authProvider.userPhotoUrl!)
+                                        : null,
+                                    child: authProvider.userPhotoUrl == null
+                                        ? Icon(
+                                            Icons.person,
+                                            size: 30,
+                                            color: Colors.green.shade700,
+                                          )
+                                        : null,
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          authProvider.userDisplayName ?? 'User',
+                                          style: const TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          authProvider.userEmail ?? 'email@example.com',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              const Divider(),
+                              const SizedBox(height: 8),
+                              // Logout Button
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  onPressed: () async {
+                                    final shouldLogout = await showDialog<bool>(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text('Logout'),
+                                        content: const Text('Are you sure you want to logout?'),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(context, false),
+                                            child: const Text('Cancel'),
+                                          ),
+                                          ElevatedButton(
+                                            onPressed: () => Navigator.pop(context, true),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: Colors.red,
+                                            ),
+                                            child: const Text(
+                                              'Logout',
+                                              style: TextStyle(color: Colors.white),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+
+                                    if (shouldLogout == true && mounted) {
+                                      await authProvider.signOut();
+                                      // Navigation will be handled by auth state listener
+                                    }
+                                  },
+                                  icon: const Icon(Icons.logout),
+                                  label: const Text('Logout'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 32),
                   // Permissions Status Card
                   Card(
                     elevation: 4,

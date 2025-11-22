@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "993584310912",
+    "project_id": "felinefocused-384a9",
+    "storage_bucket": "felinefocused-384a9.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:993584310912:android:27e6ccfe8319ca71971465",
+        "android_client_info": {
+          "package_name": "com.example.felinefocused"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBuRD0BYweieg1m-iC88xJGZoUHTkTf5tQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

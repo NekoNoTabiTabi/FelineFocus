@@ -45,7 +45,9 @@ dependencies:
   shared_preferences: ^2.5.3
   app_usage: ^4.0.1
   device_apps: ^2.2.0
-
+  firebase_core: ^2.24.2
+  firebase_auth: ^4.16.0
+  google_sign_in: ^6.2.1 
 dev_dependencies:
   flutter_test:
     sdk: flutter

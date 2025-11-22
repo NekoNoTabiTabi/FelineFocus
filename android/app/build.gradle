@@ -24,6 +24,7 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        multiDexEnabled = true 
     }
 
     buildTypes {
@@ -42,3 +43,15 @@ android {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // Firebase BOM and Analytics
+    implementation platform('com.google.firebase:firebase-bom:34.6.0')
+    implementation 'com.google.firebase:firebase-analytics'
+    // Multidex support (required when multiDexEnabled = true and minSdk < 21)
+    implementation 'androidx.multidex:multidex:2.0.1'
+}
+
+// Apply Google services plugin (Groovy style) so the plugin uses the
+// classpath declared in the project-level build file.
+apply plugin: 'com.google.gms.google-services'
