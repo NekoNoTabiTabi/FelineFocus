@@ -156,29 +156,6 @@ class _BlockAppsScreenState extends State<BlockAppsScreen> {
                   ),
                 ),
 
-Card(
-  child: SwitchListTile(
-    secondary: Icon(
-      Icons.exit_to_app,
-      color: context.watch<TimeProvider>().isRunning && AppBlockManager.instance.autoExitEnabled
-          ? Colors.red
-          : Colors.grey,
-    ),
-    title: const Text('Auto-Exit Blocked Apps'),
-    subtitle: Text(
-      AppBlockManager.instance.autoExitEnabled
-          ? 'Apps will close automatically when blocked'
-          : 'Apps will be blocked with overlay only',
-    ),
-    value: AppBlockManager.instance.autoExitEnabled,
-    onChanged: (value) {
-      setState(() {
-        AppBlockManager.instance.setAutoExit(value);
-      });
-    },
-    activeColor: Colors.red,
-  ),
-),
 
 
                 // Show which apps will be affected by reels blocking

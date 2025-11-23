@@ -32,7 +32,7 @@ class AppBlockManager {
   static const Duration _autoExitDelay = Duration(milliseconds: 500);
 
   static const bool _debugMode = true;
-  static const bool _debugSubNodes = false;
+  static const bool _debugSubNodes = true;
 
   static const Duration _reelsDebounceDelay = Duration(milliseconds: 1500);
 
