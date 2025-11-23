@@ -62,16 +62,26 @@ class AppBlockManager {
 
   Future<void> initialize() async {
     debugPrint("🔧 Initializing AppBlockManager (permissions only)");
-    
+    // NOTE: Do not request permissions automatically here. Requesting should
+    // be driven by the onboarding flow or explicit user action so the app
+    // doesn't prompt for permissions before the UI is ready.
+    final overlayGranted = await FlutterOverlayWindow.isPermissionGranted();
+    final accessibilityGranted = await FlutterAccessibilityService.isAccessibilityPermissionEnabled();
+
+    debugPrint("🔧 Initial permission state - overlay: $overlayGranted, accessibility: $accessibilityGranted");
+    debugPrint("✅ AppBlockManager initialized (ready to start)");
+  }
+
+  /// Request required runtime permissions. This is intended to be called from
+  /// onboarding or when the user explicitly enables features.
+  Future<void> requestPermissions() async {
     if (!await FlutterOverlayWindow.isPermissionGranted()) {
       await FlutterOverlayWindow.requestPermission();
     }
-    
+
     if (!await FlutterAccessibilityService.isAccessibilityPermissionEnabled()) {
       await FlutterAccessibilityService.requestAccessibilityPermission();
     }
-    
-    debugPrint("✅ AppBlockManager initialized (ready to start)");
   }
 
   Future<void> enableBlocking() async {
@@ -97,7 +107,6 @@ class AppBlockManager {
       if (packageName == "com.example.felinefocused") return;
 
       final nodeId = event.nodeId?.toString() ?? "";
-      final eventType = event.eventType?.toString() ?? "";
       final subNodes = event.subNodes;
 
       if (!_blockingEnabled) return;

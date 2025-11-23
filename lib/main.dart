@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_core/firebase_core.dart';
+import 'package:shared_preferences/shared_preferences.dart'; 
 import 'app.dart';
 import 'provider/timer_provider.dart';
 import 'provider/auth_provider.dart';
 import 'service/app_block_service.dart'; 
 import 'overlays/output_overlay.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize Firebase
   await Firebase.initializeApp();
-  
+
   // Only initialize permissions, don't start monitoring yet
   await AppBlockManager.instance.initialize();
 
@@ -21,13 +21,17 @@ void main() async {
   final timeProvider = TimeProvider();
   await timeProvider.initialize();
 
+  // ADD THIS - Check if onboarding is complete
+  final prefs = await SharedPreferences.getInstance();
+  final onboardingComplete = prefs.getBool('onboarding_complete') ?? false;
+
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: timeProvider),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
       ],
-      child: const MyApp(),
+      child: MyApp(showOnboarding: !onboardingComplete), // PASS THIS
     ),
   );
 }
@@ -52,5 +56,3 @@ void overlayMain() {
     ),
   );
 }
-
-
