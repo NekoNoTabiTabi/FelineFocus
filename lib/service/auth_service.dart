@@ -55,14 +55,31 @@ class AuthService {
         password: password,
       );
 
-      // Update display name if provided
+      // WORKAROUND: Update display name with error handling
       if (displayName != null && userCredential.user != null) {
-        await userCredential.user!.updateDisplayName(displayName);
-        await userCredential.user!.reload();
+        try {
+          debugPrint("📝 Attempting to update display name: $displayName");
+          await userCredential.user!.updateDisplayName(displayName);
+          
+          // Try to reload, but catch any errors
+          try {
+            await userCredential.user!.reload();
+          } catch (reloadError) {
+            debugPrint("⚠️ Reload error (non-critical): $reloadError");
+          }
+          
+          debugPrint("✅ Display name updated successfully");
+        } catch (displayNameError) {
+          debugPrint("⚠️ Display name update error (non-critical): $displayNameError");
+          // Don't fail signup just because display name update failed
+        }
       }
 
-      debugPrint("✅ Sign up successful: ${userCredential.user?.email}");
-      return AuthResult(success: true, user: userCredential.user);
+      // Get fresh user data
+      final freshUser = _auth.currentUser;
+      
+      debugPrint("✅ Sign up successful: ${freshUser?.email}");
+      return AuthResult(success: true, user: freshUser);
     } on FirebaseAuthException catch (e) {
       debugPrint("❌ Sign up error: ${e.code} - ${e.message}");
       return AuthResult(
@@ -71,6 +88,14 @@ class AuthService {
       );
     } catch (e) {
       debugPrint("❌ Unexpected sign up error: $e");
+      
+      // Check if user was actually created despite the error
+      final currentUser = _auth.currentUser;
+      if (currentUser != null && currentUser.email == email) {
+        debugPrint("✅ User was created successfully despite error");
+        return AuthResult(success: true, user: currentUser);
+      }
+      
       return AuthResult(
         success: false,
         errorMessage: 'An unexpected error occurred. Please try again.',
@@ -221,18 +246,32 @@ class AuthService {
     }
   }
 
-  /// Update display name
+  /// Update display name - WITH ERROR HANDLING
   Future<AuthResult> updateDisplayName(String displayName) async {
     try {
       debugPrint("🔐 Updating display name to: $displayName");
       
       await _auth.currentUser?.updateDisplayName(displayName);
-      await _auth.currentUser?.reload();
+      
+      // Try to reload, but catch any errors
+      try {
+        await _auth.currentUser?.reload();
+      } catch (reloadError) {
+        debugPrint("⚠️ Reload error (non-critical): $reloadError");
+      }
       
       debugPrint("✅ Display name updated");
       return AuthResult(success: true);
     } catch (e) {
       debugPrint("❌ Display name update error: $e");
+      
+      // Check if the update actually worked despite the error
+      final currentName = _auth.currentUser?.displayName;
+      if (currentName == displayName) {
+        debugPrint("✅ Display name was updated successfully despite error");
+        return AuthResult(success: true);
+      }
+      
       return AuthResult(
         success: false,
         errorMessage: 'Failed to update display name',

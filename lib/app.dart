@@ -29,9 +29,13 @@ class MyApp extends StatelessWidget {
       // Use auth state to determine initial screen
       home: Consumer<AuthProvider>(
         builder: (context, authProvider, _) {
-          // Show loading while checking auth state
-          if (authProvider.user == null && !authProvider.isLoading) {
-            return const LoginScreen();
+          // Show loading spinner while checking auth state
+          if (authProvider.isLoading) {
+            return const Scaffold(
+              body: Center(
+                child: CircularProgressIndicator(),
+              ),
+            );
           }
 
           // User is logged in

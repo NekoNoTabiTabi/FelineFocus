@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_accessibility_service/flutter_accessibility_service.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 import '../provider/timer_provider.dart';
 import '../provider/auth_provider.dart';
+
+
+
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
 
@@ -91,6 +95,13 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget build(BuildContext context) {
     final timeProvider = Provider.of<TimeProvider>(context);
     final allPermissionsGranted = _accessibilityEnabled && _overlayEnabled;
+
+    // DEBUG: Print current Firebase user and AuthProvider values to help
+    // verify whether Firebase Auth is initialized and user profile is available.
+    final firebaseUser = fb_auth.FirebaseAuth.instance.currentUser;
+    debugPrint('DEBUG: Firebase currentUser -> uid=${firebaseUser?.uid}, name=${firebaseUser?.displayName}, email=${firebaseUser?.email}');
+    final authProv = Provider.of<AuthProvider>(context, listen: false);
+    debugPrint('DEBUG: AuthProvider -> name=${authProv.userDisplayName}, email=${authProv.userEmail}');
 
     return Scaffold(
       appBar: AppBar(

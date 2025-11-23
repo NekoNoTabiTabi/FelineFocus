@@ -6,7 +6,7 @@ class AuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService.instance;
   
   User? _user;
-  bool _isLoading = false;
+  bool _isLoading = true; // START as loading
   String? _errorMessage;
 
   User? get user => _user;
@@ -23,9 +23,19 @@ class AuthProvider extends ChangeNotifier {
   }
 
   void _init() {
+    // Get initial user state
+    _user = _authService.currentUser;
+    
+    debugPrint("👤 AuthProvider initialized - Current user: ${_user?.email ?? 'None'}");
+    
+    // Mark as done loading after getting initial state
+    _isLoading = false;
+    notifyListeners();
+    
     // Listen to auth state changes
     _authService.authStateChanges.listen((User? user) {
       _user = user;
+      _isLoading = false; // Always stop loading after state change
       notifyListeners();
       
       if (user != null) {
