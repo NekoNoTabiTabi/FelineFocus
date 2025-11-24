@@ -230,11 +230,16 @@ class TimeProvider extends ChangeNotifier {
     
     _remainingTime = _initialTime;
     notifyListeners();
-    
-    await CompletionOverlayService.instance.showCompletionOverlayWithAutoClose(
-      duration: const Duration(seconds: 10),
-    );
-    
+    // Fire overlay but do not await it so navigation can happen immediately.
+    // Completion overlay is designed to show outside the app; the service will
+    // itself check whether it's appropriate to show the overlay (e.g. only
+    // when the app is backgrounded). We purposely don't await the auto-close
+    // to avoid delaying UI navigation.
+    CompletionOverlayService.instance
+        .showCompletionOverlayWithAutoClose(duration: const Duration(seconds: 10));
+
+    // Trigger any UI callbacks (navigation) immediately so completion screen
+    // appears without waiting for overlay work to finish.
     onTimerComplete?.call();
   }
 
