@@ -4,8 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../service/app_block_service.dart';
 import '../service/completion_overlay_service.dart';
+import '../service/focus_session_service.dart';
 import '../models/blocked_app_section.dart';
-import '../models/focus_session.dart'; // ADD THIS
+import '../models/focus_session.dart';
 import '../models/daily_stats.dart';
 
 class TimeProvider extends ChangeNotifier {
@@ -19,25 +20,27 @@ class TimeProvider extends ChangeNotifier {
   List<BlockedAppSection> _selectedAppSections = [];
   bool _blockReels = false;
 
-  // ADD THESE NEW FIELDS
   List<FocusSession> _sessionHistory = [];
   DateTime? _currentSessionStartTime;
   int _currentSessionElapsedSeconds = 0;
 
-  // SharedPreferences keys
+  // NEW: Current user ID
+  String? _currentUserId;
+  bool _isLoadingHistory = false;
+
+  // SharedPreferences keys (for timer settings only, not sessions)
   static const String _keyInitialTime = 'initial_time';
   static const String _keySelectedAppSections = 'selected_app_sections';
   static const String _keyBlockReels = 'block_reels';
-  static const String _keySessionHistory = 'session_history'; // ADD THIS
 
   int get remainingTime => _remainingTime;
   int get initialTime => _initialTime;
   bool get isRunning => _isRunning;
   List<BlockedAppSection> get selectedAppSections => _selectedAppSections;
   bool get blockReels => _blockReels;
-  List<FocusSession> get sessionHistory => _sessionHistory; // ADD THIS
+  List<FocusSession> get sessionHistory => _sessionHistory;
+  bool get isLoadingHistory => _isLoadingHistory;
 
-  // ADD THESE GETTERS FOR STATS
   int get totalSessions => _sessionHistory.length;
   
   int get completedSessions => _sessionHistory.where((s) => s.completed).length;
@@ -56,7 +59,6 @@ class TimeProvider extends ChangeNotifier {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     
-    // Sort sessions by date (newest first)
     final sortedSessions = List<FocusSession>.from(_sessionHistory)
       ..sort((a, b) => b.startTime.compareTo(a.startTime));
     
@@ -70,11 +72,10 @@ class TimeProvider extends ChangeNotifier {
       );
       
       if (sessionDate == checkDate) {
-        if (!session.completed) continue; // Only count completed sessions
+        if (!session.completed) continue;
         streak++;
         checkDate = checkDate.subtract(const Duration(days: 1));
       } else if (sessionDate.isBefore(checkDate)) {
-        // Gap in streak
         break;
       }
     }
@@ -86,11 +87,42 @@ class TimeProvider extends ChangeNotifier {
     await _loadSavedData();
   }
 
+  /// NEW: Set current user and load their history
+  Future<void> setUser(String? userId) async {
+    _currentUserId = userId;
+    
+    if (userId != null) {
+      await loadUserHistory();
+    } else {
+      _sessionHistory.clear();
+      notifyListeners();
+    }
+  }
+
+  /// NEW: Load user's focus session history from Firestore
+  Future<void> loadUserHistory() async {
+    if (_currentUserId == null) return;
+    
+    _isLoadingHistory = true;
+    notifyListeners();
+    
+    try {
+      final sessions = await FocusSessionService.instance.getFocusSessions(_currentUserId!);
+      _sessionHistory = sessions;
+      debugPrint("📚 Loaded ${sessions.length} focus sessions from Firestore");
+    } catch (e) {
+      debugPrint("❌ Error loading history: $e");
+    } finally {
+      _isLoadingHistory = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> _loadSavedData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       
-      // Load initial time
+      // Load timer settings (not sessions)
       final savedTime = prefs.getInt(_keyInitialTime) ?? 0;
       if (savedTime > 0) {
         _initialTime = savedTime;
@@ -98,7 +130,6 @@ class TimeProvider extends ChangeNotifier {
         debugPrint("📂 Loaded saved timer: ${_formatTime(savedTime)}");
       }
       
-      // Load selected app sections
       final savedSectionsJson = prefs.getStringList(_keySelectedAppSections) ?? [];
       if (savedSectionsJson.isNotEmpty) {
         _selectedAppSections = savedSectionsJson
@@ -107,18 +138,8 @@ class TimeProvider extends ChangeNotifier {
         debugPrint("📂 Loaded ${_selectedAppSections.length} saved app sections");
       }
       
-      // Load reels blocking preference
       _blockReels = prefs.getBool(_keyBlockReels) ?? false;
       debugPrint("📂 Loaded reels blocking: $_blockReels");
-      
-      // ADD THIS - Load session history
-      final savedHistoryJson = prefs.getStringList(_keySessionHistory) ?? [];
-      if (savedHistoryJson.isNotEmpty) {
-        _sessionHistory = savedHistoryJson
-            .map((json) => FocusSession.fromJson(jsonDecode(json)))
-            .toList();
-        debugPrint("📂 Loaded ${_sessionHistory.length} focus sessions");
-      }
       
       notifyListeners();
     } catch (e) {
@@ -130,7 +151,6 @@ class TimeProvider extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt(_keyInitialTime, _initialTime);
-      debugPrint("💾 Saved initial time: ${_formatTime(_initialTime)}");
     } catch (e) {
       debugPrint("❌ Error saving initial time: $e");
     }
@@ -143,7 +163,6 @@ class TimeProvider extends ChangeNotifier {
           .map((section) => jsonEncode(section.toJson()))
           .toList();
       await prefs.setStringList(_keySelectedAppSections, jsonList);
-      debugPrint("💾 Saved ${_selectedAppSections.length} selected app sections");
     } catch (e) {
       debugPrint("❌ Error saving selected app sections: $e");
     }
@@ -153,23 +172,8 @@ class TimeProvider extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_keyBlockReels, _blockReels);
-      debugPrint("💾 Saved reels blocking: $_blockReels");
     } catch (e) {
       debugPrint("❌ Error saving reels blocking: $e");
-    }
-  }
-
-  // ADD THIS - Save session history
-  Future<void> _saveSessionHistory() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final jsonList = _sessionHistory
-          .map((session) => jsonEncode(session.toJson()))
-          .toList();
-      await prefs.setStringList(_keySessionHistory, jsonList);
-      debugPrint("💾 Saved ${_sessionHistory.length} focus sessions");
-    } catch (e) {
-      debugPrint("❌ Error saving session history: $e");
     }
   }
 
@@ -196,8 +200,6 @@ class TimeProvider extends ChangeNotifier {
     if (_remainingTime <= 0) return;
 
     _isRunning = true;
-    
-    // ADD THIS - Track session start
     _currentSessionStartTime = DateTime.now();
     _currentSessionElapsedSeconds = 0;
     
@@ -210,7 +212,7 @@ class TimeProvider extends ChangeNotifier {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) async {
       if (_remainingTime > 0) {
         _remainingTime--;
-        _currentSessionElapsedSeconds++; // ADD THIS
+        _currentSessionElapsedSeconds++;
         notifyListeners();
       } else {
         await _onTimerComplete();
@@ -224,12 +226,9 @@ class TimeProvider extends ChangeNotifier {
     _timer = null;
 
     await AppBlockManager.instance.disableBlocking();
-    
-    // ADD THIS - Save completed session
     await _saveSession(completed: true);
     
     _remainingTime = _initialTime;
-    
     notifyListeners();
     
     await CompletionOverlayService.instance.showCompletionOverlayWithAutoClose(
@@ -244,7 +243,6 @@ class TimeProvider extends ChangeNotifier {
     _timer?.cancel();
     _timer = null;
     
-    // ADD THIS - Save incomplete session
     if (_currentSessionStartTime != null && _currentSessionElapsedSeconds > 0) {
       await _saveSession(completed: false);
     }
@@ -254,9 +252,9 @@ class TimeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ADD THIS NEW METHOD
+  /// NEW: Save session to Firestore
   Future<void> _saveSession({required bool completed}) async {
-    if (_currentSessionStartTime == null) return;
+    if (_currentSessionStartTime == null || _currentUserId == null) return;
     
     final session = FocusSession(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -268,13 +266,21 @@ class TimeProvider extends ChangeNotifier {
       blockedAppNames: _selectedAppSections.map((s) => s.appName).toList(),
     );
     
-    _sessionHistory.insert(0, session); // Add to beginning (newest first)
-    await _saveSessionHistory();
+    try {
+      // Save to Firestore
+      await FocusSessionService.instance.saveFocusSession(_currentUserId!, session);
+      
+      // Add to local list
+      _sessionHistory.insert(0, session);
+      notifyListeners();
+      
+      debugPrint("💾 Saved ${completed ? 'completed' : 'incomplete'} session to Firestore");
+    } catch (e) {
+      debugPrint("❌ Error saving session: $e");
+    }
     
     _currentSessionStartTime = null;
     _currentSessionElapsedSeconds = 0;
-    
-    debugPrint("💾 Saved ${completed ? 'completed' : 'incomplete'} session: ${session.durationText}");
   }
 
   Future<void> resetTimer() async {
@@ -286,7 +292,6 @@ class TimeProvider extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_keyInitialTime);
-      debugPrint("🗑️ Cleared saved timer");
     } catch (e) {
       debugPrint("❌ Error clearing saved timer: $e");
     }
@@ -310,18 +315,32 @@ class TimeProvider extends ChangeNotifier {
       await prefs.remove(_keyInitialTime);
       await prefs.remove(_keySelectedAppSections);
       await prefs.remove(_keyBlockReels);
-      await prefs.remove(_keySessionHistory); // ADD THIS
       
       _remainingTime = 0;
       _initialTime = 0;
       _selectedAppSections.clear();
       _blockReels = false;
-      _sessionHistory.clear(); // ADD THIS
+      
+      // NOTE: Don't clear Firestore history here - add separate method if needed
       
       debugPrint("🗑️ Cleared all saved data");
       notifyListeners();
     } catch (e) {
       debugPrint("❌ Error clearing data: $e");
+    }
+  }
+
+  /// NEW: Clear user history from Firestore
+  Future<void> clearUserHistory() async {
+    if (_currentUserId == null) return;
+    
+    try {
+      await FocusSessionService.instance.deleteAllSessions(_currentUserId!);
+      _sessionHistory.clear();
+      notifyListeners();
+      debugPrint("🗑️ Cleared user history from Firestore");
+    } catch (e) {
+      debugPrint("❌ Error clearing history: $e");
     }
   }
 
@@ -332,7 +351,7 @@ class TimeProvider extends ChangeNotifier {
     return "${hours.toString().padLeft(2, "0")}:${minutes.toString().padLeft(2, "0")}:${seconds.toString().padLeft(2, "0")}";
   }
 
- DailyStats getStatsForDate(DateTime date) {
+  DailyStats getStatsForDate(DateTime date) {
     final normalizedDate = DateTime(date.year, date.month, date.day);
     
     final sessionsForDate = _sessionHistory.where((session) {
@@ -352,7 +371,6 @@ class TimeProvider extends ChangeNotifier {
     final completed = sessionsForDate.where((s) => s.completed).length;
     final started = sessionsForDate.length;
     
-    // Count blocked apps
     final appCounts = <String, int>{};
     for (var session in sessionsForDate) {
       for (var app in session.blockedAppNames) {
@@ -360,7 +378,6 @@ class TimeProvider extends ChangeNotifier {
       }
     }
     
-    // Get top 3 most blocked apps
     final sortedApps = appCounts.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
     final topApps = sortedApps.take(3).map((e) => e.key).toList();
@@ -374,15 +391,12 @@ class TimeProvider extends ChangeNotifier {
     );
   }
 
-  // Get today's stats
   DailyStats get todayStats => getStatsForDate(DateTime.now());
 
-  // Get yesterday's stats
   DailyStats get yesterdayStats => getStatsForDate(
     DateTime.now().subtract(const Duration(days: 1)),
   );
 
-  // Get last 7 days of stats
   List<DailyStats> get weekStats {
     final stats = <DailyStats>[];
     final today = DateTime.now();
@@ -395,7 +409,6 @@ class TimeProvider extends ChangeNotifier {
     return stats;
   }
 
-  // Get weekly summary
   String get weekSummary {
     final weeklyMinutes = weekStats.fold<int>(
       0,
@@ -412,10 +425,8 @@ class TimeProvider extends ChangeNotifier {
     }
   }
 
-  // Check if user focused today
   bool get focusedToday => todayStats.totalMinutes > 0;
 
-  // Get best day this week (most minutes)
   DailyStats? get bestDayThisWeek {
     if (weekStats.isEmpty) return null;
     
@@ -428,5 +439,4 @@ class TimeProvider extends ChangeNotifier {
     
     return best.totalMinutes > 0 ? best : null;
   }
-
 }

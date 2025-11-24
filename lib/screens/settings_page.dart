@@ -502,6 +502,60 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                   ),
 
+const SizedBox(height: 12),
+
+Card(
+  color: Colors.red.shade50,
+  child: ListTile(
+    leading: const Icon(Icons.history_toggle_off, color: Colors.red),
+    title: const Text('Clear Focus History'),
+    subtitle: const Text('Delete all focus session records'),
+    onTap: () {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Clear Focus History?'),
+          content: const Text(
+            'This will permanently delete all your focus session records.\n\n'
+            'This action cannot be undone.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final timeProvider = Provider.of<TimeProvider>(
+                  context,
+                  listen: false,
+                );
+                await timeProvider.clearUserHistory();
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Focus history cleared'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+              ),
+              child: const Text(
+                'Clear History',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  ),
+),
+
                   const SizedBox(height: 32),
 
                   // App Info

@@ -7,7 +7,7 @@ import 'app.dart';
 import 'provider/timer_provider.dart';
 import 'provider/auth_provider.dart';
 import 'service/app_block_service.dart'; 
-import 'service/auth_service.dart'; // ADD THIS
+import 'service/auth_service.dart';
 import 'overlays/output_overlay.dart';
 import 'firebase_options.dart';
 
@@ -19,18 +19,18 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   
-  // Initialize AuthService (configure App Check, etc.)
+  // Initialize AuthService
   await AuthService.instance.initialize();
   
-  // Wait a moment for Firebase Auth to fully initialize
+  // Wait for Firebase Auth to fully initialize
   await Future.delayed(const Duration(milliseconds: 300));
   
   debugPrint("🔥 Firebase initialized - Current user: ${AuthService.instance.currentUser?.email ?? 'None'}");
 
-  // Only initialize permissions, don't start monitoring yet
+  // Initialize permissions
   await AppBlockManager.instance.initialize();
 
-  // Create and initialize TimeProvider
+  // Create TimeProvider
   final timeProvider = TimeProvider();
   await timeProvider.initialize();
 
@@ -42,19 +42,32 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: timeProvider),
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(
+          create: (_) => AuthProvider(),
+        ),
+        // NEW: Listen to auth changes and update TimeProvider. Use a
+        // ChangeNotifierProxyProvider so the provided type is change-notifier-aware
+        // (avoids providing a Listenable via a plain Provider which triggers
+        // runtime checks).
+        ChangeNotifierProxyProvider<AuthProvider, TimeProvider>(
+          create: (_) => timeProvider,
+          update: (context, authProvider, previous) {
+            final userId = authProvider.user?.uid;
+            previous?.setUser(userId);
+            return previous ?? timeProvider;
+          },
+        ),
       ],
       child: MyApp(showOnboarding: !onboardingComplete),
     ),
   );
 }
 
-/// Single entry point for ALL overlays - switches content based on type
+/// Single entry point for ALL overlays
 @pragma("vm:entry-point")
 void overlayMain() {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Set system UI for overlay
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,

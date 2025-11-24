@@ -9,10 +9,17 @@ class HistoryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final timeProvider = Provider.of<TimeProvider>(context);
+    
+    // Show loading indicator while fetching from Firestore
+    if (timeProvider.isLoadingHistory) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+    
     final sessions = timeProvider.sessionHistory;
 
     return Scaffold(
-      
       body: sessions.isEmpty
           ? _buildEmptyState()
           : Column(

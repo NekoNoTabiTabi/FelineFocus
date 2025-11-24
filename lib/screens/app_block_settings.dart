@@ -22,20 +22,29 @@ class _BlockAppsScreenState extends State<BlockAppsScreen> {
   @override
   void initState() {
     super.initState();
-    _loadApps();
+    // Defer loading until after the first frame so `context` is fully available
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadApps();
+    });
   }
 
   Future<void> _loadApps() async {
     final list = await InstalledAppsService.instance.getLaunchableAppViewModels();
-    
-    final timeProvider = Provider.of<TimeProvider>(context, listen: false);
-    selectedSections = List.from(timeProvider.selectedAppSections);
-    blockReels = timeProvider.blockReels;
-    
-    setState(() {
+    // Access the provider after the widget is mounted to avoid "Provider not found"
+    if (mounted) {
+      final timeProvider = Provider.of<TimeProvider>(context, listen: false);
+      selectedSections = List.from(timeProvider.selectedAppSections);
+      blockReels = timeProvider.blockReels;
+
+      setState(() {
+        apps = list;
+        loading = false;
+      });
+    } else {
+      // Fallback: still set apps but don't try to read provider
       apps = list;
       loading = false;
-    });
+    }
   }
 
   bool _isAppSelected(String packageName) {
