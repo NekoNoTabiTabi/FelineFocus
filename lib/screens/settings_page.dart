@@ -105,7 +105,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Settings'),
+        title: const Text('Settings', style: TextStyle(color: Colors.white)       ),
         backgroundColor: Colors.green,
       ),
       body: _isCheckingPermissions
@@ -232,7 +232,18 @@ class _SettingsPageState extends State<SettingsPage> {
                     },
                   ),
 
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 32),                 
+                  
+                  // Permissions Section
+                  const Text(
+                    'Required Permissions',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
                   // Permissions Status Card
                   Card(
                     elevation: 4,
@@ -293,16 +304,6 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
 
                   const SizedBox(height: 24),
-                  
-                  // Permissions Section
-                  const Text(
-                    'Required Permissions',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
 
                   // Accessibility Service Card
                   _buildPermissionCard(

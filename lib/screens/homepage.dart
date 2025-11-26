@@ -56,7 +56,7 @@ class _HomePageState extends State<HomePage> {
         actions: [
           // Settings button
           IconButton(
-            icon: const Icon(Icons.settings, color: Colors.black),
+            icon: const Icon(Icons.settings, color: Colors.white),
             onPressed: () async {
               await Navigator.push(
                 context,
@@ -186,8 +186,13 @@ class _HomeContent extends StatelessWidget {
           const SizedBox(height: 50),
 
           // Start Focus Button
-          ElevatedButton(
-            onPressed: () {
+          // Example: fixed-size button using SizedBox wrapper
+          // This forces a fixed width & height regardless of child padding
+          SizedBox(
+            width: 220, // fixed width
+            height: 56, // fixed height
+            child: ElevatedButton(
+              onPressed: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -197,23 +202,30 @@ class _HomeContent extends StatelessWidget {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green,
+              elevation: 6,
+              shadowColor: Colors.black.withOpacity(0.25),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(30),
               ),
+              // Add thin white border (adjust color/width to taste)
+              side: BorderSide(color: Colors.white.withOpacity(0.95), width: 2),
               padding: const EdgeInsets.symmetric(
                 horizontal: 48,
                 vertical: 16,
               ),
             ),
-            child: const Text(
+              child: const Text(
               "Start Focus",
               style: TextStyle(fontSize: 18, color: Colors.white),
+            ),
             ),
           ),
 
           const SizedBox(height: 20),
 
           // App Block Button
+          // Example: specifying fixedSize directly in ElevatedButton.styleFrom
+          // This also guarantees fixed size for the button itself.
           ElevatedButton(
             onPressed: () {
               Navigator.push(
@@ -225,16 +237,19 @@ class _HomeContent extends StatelessWidget {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green,
+              elevation: 6,
+              shadowColor: Colors.black.withOpacity(0.25),
+              // Add thin white border (adjust color/width to taste)
+              side: BorderSide(color: Colors.white.withOpacity(0.95), width: 2),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(30),
               ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 48,
-                vertical: 16,
-              ),
+              // fixedSize enforces the width/height of the button
+              fixedSize: const Size(220, 56),
+              // padding will be ignored by fixedSize for the total widget size
             ),
             child: const Text(
-              'App Block',
+              'Setup App Block',
               style: TextStyle(fontSize: 18, color: Colors.white),
             ),
           ),

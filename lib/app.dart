@@ -25,6 +25,12 @@ class MyApp extends StatelessWidget {
       title: 'Feline Focused',
       theme: ThemeData(
         primarySwatch: Colors.blue,
+        // Make AppBar icons (including the back button) white globally
+        appBarTheme: const AppBarTheme(
+          iconTheme: IconThemeData(color: Colors.white),
+          actionsIconTheme: IconThemeData(color: Colors.white),
+          foregroundColor: Colors.white,
+        ),
       ),
       // Use auth state to determine initial screen
       home: Consumer<AuthProvider>(
