@@ -1,7 +1,7 @@
 # Feline Focused 🐱📱
 An application that reduces distractions and improves concentration by blocking apps and tracking focus sessions.
 
-#Features
+##Features
 
 🔒 App blocking (including short-form content like YouTube Shorts)
 
@@ -14,7 +14,7 @@ An application that reduces distractions and improves concentration by blocking 
 ⚙️ Settings page for permissions, logout, and history management
 
 
-#System Requirements
+##System Requirements
 
 🤖 Android (due to accessibility service limitations on iOS)
 
@@ -22,7 +22,7 @@ An application that reduces distractions and improves concentration by blocking 
 
 🔥 Firebase project setup
 
-#Technology Stack
+##Technology Stack
 
 Language: Dart
 
@@ -50,8 +50,10 @@ firebase_auth, cloud_firestore – authentication & data storage
 
 
 
-#Challenges & Limitations
+##Challenges & Limitations
+
 Works only on Android (iOS restrictions).
+
 Some bugs in overlay handling.
 
 ## Installation
