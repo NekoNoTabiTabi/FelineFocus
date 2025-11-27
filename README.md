@@ -2,35 +2,52 @@
 An application that reduces distractions and improves concentration by blocking apps and tracking focus sessions.
 
 #Features
+
 🔒 App blocking (including short-form content like YouTube Shorts)
+
 ⏱️ Customizable focus timer
+
 📊 Statistics and streak tracking
+
 🔑 Login/Signup with Firebase Authentication
+
 ⚙️ Settings page for permissions, logout, and history management
 
+
 #System Requirements
+
 🤖 Android (due to accessibility service limitations on iOS)
+
 🕊️Flutter SDK (latest stable version)
+
 🔥 Firebase project setup
 
 #Technology Stack
+
 Language: Dart
+
 Framework: Flutter
+
 Backend/Database: Firebase (Auth, Firestore, Google Sign-In)
+
 Key Packages:
+
 flutter_accessibility_service – detect blocked apps
+
 flutter_overlay_window – display overlays
+
 device_apps, android_intent_plus – exit blocked apps
+
 provider – state management
 
 firebase_auth, cloud_firestore – authentication & data storage
 
 #Sample Screenshots
 
-<img width="280" height="631" alt="image" src="https://github.com/user-attachments/assets/05490c71-e280-4341-afbf-67ac78e8eadd" />
-<img width="291" height="652" alt="image" src="https://github.com/user-attachments/assets/d9d18d46-3dda-4b26-834f-923a7375c98e" />
+<img width="280" height="660" alt="image" src="https://github.com/user-attachments/assets/05490c71-e280-4341-afbf-67ac78e8eadd" />
+<img width="291" height="660" alt="image" src="https://github.com/user-attachments/assets/d9d18d46-3dda-4b26-834f-923a7375c98e" />
 <img width="311" height="660" alt="image" src="https://github.com/user-attachments/assets/89214837-1799-47f4-89ad-f55d528813a6" />
-<img width="283" height="650" alt="image" src="https://github.com/user-attachments/assets/1c7b5cd9-6c8e-4c1b-b3af-1f731604e35f" />
+
 
 
 #Challenges & Limitations
