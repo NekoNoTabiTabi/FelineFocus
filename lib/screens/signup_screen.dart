@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../provider/auth_provider.dart';
-
+import 'homepage.dart';
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
 
@@ -28,35 +28,40 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   Future<void> _handleSignUp() async {
-    if (!_formKey.currentState!.validate()) return;
+  if (!_formKey.currentState!.validate()) return;
 
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    
-    final success = await authProvider.signUp(
-      email: _emailController.text.trim(),
-      password: _passwordController.text,
-      displayName: _nameController.text.trim(),
-    );
+  final authProvider = Provider.of<AuthProvider>(context, listen: false);
+  
+  final success = await authProvider.signUp(
+    email: _emailController.text.trim(),
+    password: _passwordController.text,
+    displayName: _nameController.text.trim(),
+  );
 
-    if (mounted) {
-      if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Account created successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pop(context);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(authProvider.errorMessage ?? 'Sign up failed'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+  if (mounted) {
+    if (success) {
+      // Navigate to home page and remove all previous routes
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const HomePage()),
+        (route) => false,
+      );
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Account created successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(authProvider.errorMessage ?? 'Sign up failed'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -77,10 +82,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // Icon
-                  Icon(
-                    Icons.person_add,
-                    size: 80,
-                    color: Colors.green.shade600,
+                 Image(
+                    image: AssetImage('assets/feline-focused-logo.png'),
+                    width: 100,
+                    height: 100,
+                    
                   ),
                   const SizedBox(height: 16),
                   
@@ -286,6 +292,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         child: const Text(
                           'Login',
                           style: TextStyle(
+                            color: Colors.green,
                             fontWeight: FontWeight.bold,
                           ),
                         ),

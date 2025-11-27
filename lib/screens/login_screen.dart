@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../provider/auth_provider.dart';
 import 'signup_screen.dart';
 import 'forgot_password_screen.dart';
+import 'homepage.dart'; // ADD THIS
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -36,7 +37,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (mounted) {
       if (success) {
-        // Navigation will be handled by auth state listener in main.dart
+        // Navigate to home page and remove all previous routes
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const HomePage()),
+          (route) => false,
+        );
+        
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Welcome back!'),
@@ -61,6 +67,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (mounted) {
       if (success) {
+        // Navigate to home page and remove all previous routes
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const HomePage()),
+          (route) => false,
+        );
+        
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Welcome!'),
@@ -75,6 +87,26 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         );
       }
+    }
+  }
+
+  // ADD THIS METHOD
+  Future<void> _navigateToSignUp() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const SignUpScreen(),
+      ),
+    );
+    
+    // Check if user just signed up successfully
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    if (mounted && authProvider.isLoggedIn) {
+      // User signed up successfully, navigate to home
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const HomePage()),
+        (route) => false,
+      );
     }
   }
 
@@ -302,14 +334,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const SignUpScreen(),
-                            ),
-                          );
-                        },
+                        onPressed: _navigateToSignUp,
                         child: const Text(
                           'Sign Up',
                           style: TextStyle(

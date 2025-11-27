@@ -255,11 +255,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
               ],
             ),
-            child: const Icon(
-              Icons.pets,
-              size: 60,
-              color: Colors.white,
-            ),
+            child: const  // App Logo/Icon
+                 Image(
+                    image: AssetImage('assets/feline-focused-logo.png'),
+                    width: 100,
+                    height: 100,
+                    
+                  ),
           ),
           
           const SizedBox(height: 40),
