@@ -171,7 +171,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ),
 
-            // Page content
+            // Page content with SingleChildScrollView
             Expanded(
               child: PageView(
                 controller: _pageController,
@@ -200,8 +200,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
                   const Spacer(),
                   ElevatedButton(
-                    onPressed: _currentPage == 2 && _accessibilityEnabled && _overlayEnabled
-                        ? _completeOnboarding
+                    onPressed: _currentPage == 2 
+                        ? _completeOnboarding 
                         : _nextPage,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
@@ -231,15 +231,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildWelcomePage() {
-    return Padding(
-      padding: const EdgeInsets.all(32.0),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 16.0),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          const SizedBox(height: 20),
           // App icon/illustration
           Container(
-            width: 120,
-            height: 120,
+            width: 100,
+            height: 100,
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [Colors.green.shade400, Colors.green.shade600],
@@ -255,40 +256,38 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
               ],
             ),
-            child: const  // App Logo/Icon
-                 Image(
-                    image: AssetImage('assets/feline-focused-logo.png'),
-                    width: 100,
-                    height: 100,
-                    
-                  ),
+            child: const Image(
+              image: AssetImage('assets/feline-focused-logo.png'),
+              width: 80,
+              height: 80,
+            ),
           ),
           
-          const SizedBox(height: 40),
+          const SizedBox(height: 32),
           
           const Text(
             'Welcome to\nFeline Focused',
             style: TextStyle(
-              fontSize: 32,
+              fontSize: 28,
               fontWeight: FontWeight.bold,
               height: 1.2,
             ),
             textAlign: TextAlign.center,
           ),
           
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           
           Text(
             'Stay focused by blocking distracting apps and content',
             style: TextStyle(
-              fontSize: 16,
+              fontSize: 15,
               color: Colors.grey.shade600,
               height: 1.5,
             ),
             textAlign: TextAlign.center,
           ),
           
-          const SizedBox(height: 40),
+          const SizedBox(height: 32),
           
           _buildFeatureItem(
             icon: Icons.block,
@@ -296,7 +295,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             description: 'Temporarily block apps and reels during focus time',
           ),
           
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           
           _buildFeatureItem(
             icon: Icons.timer,
@@ -304,77 +303,80 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             description: 'Monitor your focus sessions and build streaks',
           ),
           
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           
           _buildFeatureItem(
             icon: Icons.trending_up,
             title: 'Stay Motivated',
             description: 'See your daily stats and improvements',
           ),
+          
+          const SizedBox(height: 20),
         ],
       ),
     );
   }
 
   Widget _buildAccessibilityPage() {
-    return Padding(
-      padding: const EdgeInsets.all(32.0),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 16.0),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          const SizedBox(height: 20),
           Icon(
             Icons.accessibility_new,
-            size: 100,
+            size: 80,
             color: _accessibilityEnabled ? Colors.green : Colors.grey.shade400,
           ),
           
-          const SizedBox(height: 30),
+          const SizedBox(height: 24),
           
           const Text(
             'Accessibility Service',
             style: TextStyle(
-              fontSize: 28,
+              fontSize: 24,
               fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          
+          const SizedBox(height: 16),
+          
+          Text(
+            'This permission allows Feline Focused to:',
+            style: TextStyle(
+              fontSize: 15,
+              color: Colors.grey.shade700,
             ),
             textAlign: TextAlign.center,
           ),
           
           const SizedBox(height: 20),
           
-          Text(
-            'This permission allows Feline Focused to:',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey.shade700,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          
-          const SizedBox(height: 24),
-          
           _buildPermissionExplanation(
             icon: Icons.visibility,
             text: 'Detect which apps you open',
           ),
           
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           
           _buildPermissionExplanation(
             icon: Icons.video_library,
             text: 'Identify reels and shorts content',
           ),
           
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           
           _buildPermissionExplanation(
             icon: Icons.security,
             text: 'Block distracting apps in real-time',
           ),
           
-          const SizedBox(height: 40),
+          const SizedBox(height: 24),
           
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: Colors.blue.shade50,
               borderRadius: BorderRadius.circular(12),
@@ -382,13 +384,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
             child: Row(
               children: [
-                Icon(Icons.info_outline, color: Colors.blue.shade700),
-                const SizedBox(width: 12),
+                Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     'We never collect or share your data. Everything stays on your device.',
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 12,
                       color: Colors.blue.shade700,
                     ),
                   ),
@@ -397,7 +399,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           ),
           
-          const SizedBox(height: 30),
+          const SizedBox(height: 24),
           
           if (_isCheckingPermissions)
             const CircularProgressIndicator()
@@ -405,24 +407,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ElevatedButton.icon(
               onPressed: _requestAccessibilityPermission,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
+                backgroundColor: Colors.red,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 24,
-                  vertical: 16,
+                  vertical: 14,
                 ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30),
                 ),
               ),
-              icon: const Icon(Icons.check_circle, color: Colors.white),
+              icon: const Icon(Icons.check_circle, color: Colors.white, size: 20),
               label: const Text(
                 'Enable Accessibility',
-                style: TextStyle(fontSize: 16, color: Colors.white),
+                style: TextStyle(fontSize: 15, color: Colors.white),
               ),
             )
           else
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
               decoration: BoxDecoration(
                 color: Colors.green.shade100,
                 borderRadius: BorderRadius.circular(30),
@@ -430,12 +432,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.check_circle, color: Colors.green.shade700),
+                  Icon(Icons.check_circle, color: Colors.green.shade700, size: 20),
                   const SizedBox(width: 8),
                   Text(
                     'Enabled ✓',
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 15,
                       fontWeight: FontWeight.bold,
                       color: Colors.green.shade700,
                     ),
@@ -443,70 +445,72 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ],
               ),
             ),
+          const SizedBox(height: 20),
         ],
       ),
     );
   }
 
   Widget _buildOverlayPage() {
-    return Padding(
-      padding: const EdgeInsets.all(32.0),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 16.0),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          const SizedBox(height: 20),
           Icon(
             Icons.layers,
-            size: 100,
+            size: 80,
             color: _overlayEnabled ? Colors.green : Colors.grey.shade400,
           ),
           
-          const SizedBox(height: 30),
+          const SizedBox(height: 24),
           
           const Text(
             'Display Over Other Apps',
             style: TextStyle(
-              fontSize: 28,
+              fontSize: 24,
               fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          
+          const SizedBox(height: 16),
+          
+          Text(
+            'This permission allows Feline Focused to:',
+            style: TextStyle(
+              fontSize: 15,
+              color: Colors.grey.shade700,
             ),
             textAlign: TextAlign.center,
           ),
           
           const SizedBox(height: 20),
           
-          Text(
-            'This permission allows Feline Focused to:',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey.shade700,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          
-          const SizedBox(height: 24),
-          
           _buildPermissionExplanation(
             icon: Icons.block,
             text: 'Show blocking screen over restricted apps',
           ),
           
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           
           _buildPermissionExplanation(
             icon: Icons.celebration,
             text: 'Display completion message when you finish',
           ),
           
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           
           _buildPermissionExplanation(
             icon: Icons.notifications_active,
             text: 'Keep you focused during sessions',
           ),
           
-          const SizedBox(height: 40),
+          const SizedBox(height: 24),
           
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: Colors.green.shade50,
               borderRadius: BorderRadius.circular(12),
@@ -514,13 +518,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
             child: Row(
               children: [
-                Icon(Icons.lock_outline, color: Colors.green.shade700),
-                const SizedBox(width: 12),
+                Icon(Icons.lock_outline, color: Colors.green.shade700, size: 20),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     'The overlay only appears during active focus sessions.',
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 12,
                       color: Colors.green.shade700,
                     ),
                   ),
@@ -529,7 +533,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           ),
           
-          const SizedBox(height: 30),
+          const SizedBox(height: 24),
           
           if (_isCheckingPermissions)
             const CircularProgressIndicator()
@@ -537,24 +541,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ElevatedButton.icon(
               onPressed: _requestOverlayPermission,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
+                backgroundColor: Colors.red,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 24,
-                  vertical: 16,
+                  vertical: 14,
                 ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30),
                 ),
               ),
-              icon: const Icon(Icons.check_circle, color: Colors.white),
+              icon: const Icon(Icons.check_circle, color: Colors.white, size: 20),
               label: const Text(
                 'Enable Overlay',
-                style: TextStyle(fontSize: 16, color: Colors.white),
+                style: TextStyle(fontSize: 15, color: Colors.white),
               ),
             )
           else
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
               decoration: BoxDecoration(
                 color: Colors.green.shade100,
                 borderRadius: BorderRadius.circular(30),
@@ -562,12 +566,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.check_circle, color: Colors.green.shade700),
+                  Icon(Icons.check_circle, color: Colors.green.shade700, size: 20),
                   const SizedBox(width: 8),
                   Text(
                     'Enabled ✓',
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 15,
                       fontWeight: FontWeight.bold,
                       color: Colors.green.shade700,
                     ),
@@ -576,11 +580,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ),
           
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           
           if (_accessibilityEnabled && _overlayEnabled)
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: Colors.green.shade100,
                 borderRadius: BorderRadius.circular(12),
@@ -588,13 +592,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.check_circle, color: Colors.green.shade700, size: 28),
-                  const SizedBox(width: 12),
+                  Icon(Icons.check_circle, color: Colors.green.shade700, size: 24),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       '🎉 All set! Tap "Get Started" to begin',
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
                         color: Colors.green.shade700,
                       ),
@@ -603,6 +607,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ],
               ),
             ),
+          const SizedBox(height: 20),
         ],
       ),
     );
@@ -614,7 +619,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     required String description,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.green.shade50,
         borderRadius: BorderRadius.circular(12),
@@ -623,14 +628,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: Colors.green.shade100,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: Colors.green.shade700, size: 28),
+            child: Icon(icon, color: Colors.green.shade700, size: 24),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -638,15 +643,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 Text(
                   title,
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 3),
                 Text(
                   description,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 12,
                     color: Colors.grey.shade600,
                   ),
                 ),
@@ -670,14 +675,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             color: Colors.green.shade100,
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(icon, color: Colors.green.shade700, size: 20),
+          child: Icon(icon, color: Colors.green.shade700, size: 18),
         ),
         const SizedBox(width: 12),
         Expanded(
           child: Text(
             text,
-            style: const TextStyle(fontSize: 15),
-          ),
+            style: const TextStyle(fontSize: 14),
+            ),
         ),
       ],
     );
