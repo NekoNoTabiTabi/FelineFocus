@@ -12,7 +12,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // If onboarding should be shown, present it first.
+  
     if (showOnboarding) {
       return const MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -25,17 +25,16 @@ class MyApp extends StatelessWidget {
       title: 'Feline Focused',
       theme: ThemeData(
         primarySwatch: Colors.blue,
-        // Make AppBar icons (including the back button) white globally
+       
         appBarTheme: const AppBarTheme(
           iconTheme: IconThemeData(color: Colors.white),
           actionsIconTheme: IconThemeData(color: Colors.white),
           foregroundColor: Colors.white,
         ),
       ),
-      // Use auth state to determine initial screen
+    
       home: Consumer<AuthProvider>(
         builder: (context, authProvider, _) {
-          // Show loading spinner while checking auth state
           if (authProvider.isLoading) {
             return const Scaffold(
               body: Center(
@@ -43,13 +42,10 @@ class MyApp extends StatelessWidget {
               ),
             );
           }
-
-          // User is logged in
           if (authProvider.isLoggedIn) {
             return const HomePage();
           }
 
-          // Default to login screen
           return const LoginScreen();
         },
       ),

@@ -43,7 +43,6 @@ dependencies:
   flutter_accessibility_service: ^1.0.0
   vibration: ^3.1.4
   shared_preferences: ^2.5.3
-  app_usage: ^4.0.1
   device_apps: ^2.2.0
   firebase_core: ^3.8.1
   firebase_auth: ^5.3.3
